@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>會員關懷員工登入 Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #FAFDFC;
+      --ink: #1F2D2B;
+      --muted: #6F817E;
+      --line: #DCEBE7;
+      --panel: #ffffff;
+      --soft: #EAF8F5;
+      --accent: #58B6A9;
+      --accent-dark: #2F8F83;
+      --warn: #9a5a00;
+      --warn-bg: #fff4de;
+      --danger: #a83434;
+      --danger-bg: #fdeaea;
+      --ok: #1f704b;
+      --ok-bg: #e4f5eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; }
+    .login {
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
+      background:
+        linear-gradient(120deg, rgba(16,32,30,.86), rgba(16,32,30,.52)),
+        radial-gradient(circle at 80% 30%, rgba(88,182,169,.24), transparent 34%),
+        #10201E;
+      color: #fff;
+    }
+    .login-copy {
+      padding: clamp(28px, 5vw, 64px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 40px;
+    }
+    .login-copy h1 { margin: 0 0 14px; font-size: clamp(34px, 5vw, 58px); line-height: 1.04; }
+    .login-copy p { max-width: 520px; color: #B7D2CD; line-height: 1.7; font-size: 16px; }
+    .login-panel {
+      align-self: center;
+      justify-self: center;
+      width: min(520px, calc(100% - 40px));
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.28);
+    }
+    .login-panel h2 { margin: 0 0 8px; }
+    .login-panel p { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+    .field { display: grid; gap: 7px; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    select, input[type="date"], input[type="search"], input[type="text"] {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--ink);
+      min-width: 0;
+    }
+    .primary {
+      border: 0;
+      border-radius: 8px;
+      min-height: 44px;
+      padding: 0 16px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease;
+    }
+    .primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .ghost {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 40px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .account-form {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 12px;
+    }
+    .account-form h3 { margin: 0; font-size: 16px; }
+    .role-checks { display: flex; gap: 8px; flex-wrap: wrap; }
+    .role-checks label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .employee-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; }
+    .employee-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .employee-chip button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 24px;
+      padding: 0 8px;
+      background: #ffe5e5;
+      color: var(--danger);
+      cursor: pointer;
+    }
+    .supervisor-only { display: none; }
+    .app { display: none; min-height: 100svh; grid-template-columns: 268px minmax(0, 1fr); }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      background: #DDEDE9;
+      color: #1F2D2B;
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .sidebar::-webkit-scrollbar { width: 8px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(47,143,131,.24); border-radius: 999px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .brand { padding: 0 6px 16px; border-bottom: 1px solid rgba(47,143,131,.16); }
+    .brand b { display: block; font-size: 22px; line-height: 1.15; }
+    .brand span { display: block; color: #5E7D78; font-size: 12px; margin-bottom: 7px; }
+    .user-box {
+      border: 1px solid rgba(47,143,131,.2);
+      border-radius: 8px;
+      padding: 12px;
+      color: #3E5854;
+      line-height: 1.55;
+    }
+    .user-box strong { display: block; color: #1F2D2B; font-size: 18px; margin-bottom: 4px; }
+    .nav { display: grid; gap: 7px; }
+    .nav button {
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #2D4642;
+      text-align: left;
+      padding: 10px 11px;
+      cursor: pointer;
+    }
+    .nav button.active, .nav button:hover { background: rgba(255,255,255,.68); color: #1F2D2B; }
+    .main { padding: 26px; min-width: 0; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 2px 0 6px;
+    }
+    .topbar-title { min-width: 220px; }
+    h2 { margin: 0 0 6px; font-size: 28px; line-height: 1.16; }
+    .lead { margin: 0; color: var(--muted); line-height: 1.55; }
+    .actions { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .topbar-actions {
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tool-field {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .tool-field input[type="date"] { min-width: 152px; }
+    .topbar-actions .ghost,
+    .topbar-actions .file-button {
+      min-height: 42px;
+      padding: 0 14px;
+      box-shadow: 0 6px 18px rgba(23,33,36,.04);
+    }
+    .file-button { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
+    .file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .status { min-height: 22px; margin-bottom: 16px; color: var(--muted); font-size: 13px; }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(23,33,36,.05);
+    }
+    .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+    .metric strong { font-size: 25px; line-height: 1; }
+    .workspace {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 18px 48px rgba(23,33,36,.08);
+    }
+    .toolbar { display: flex; justify-content: space-between; gap: 12px; padding: 13px; border-bottom: 1px solid var(--line); background: #FBFEFD; }
+    .tabs { display: flex; gap: 6px; overflow: auto; }
+    .tab {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      padding: 9px 11px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .tab.active, .tab:hover { background: var(--soft); color: var(--accent-dark); border-color: #CBEAE4; }
+    .search { width: min(280px, 35vw); }
+    .panel { display: none; padding: 18px; animation: rise .2s ease both; }
+    .panel.active { display: block; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+    .panel-head h3 { margin: 0 0 5px; font-size: 18px; }
+    .panel-head p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      background: var(--soft);
+      color: var(--accent-dark);
+      border: 1px solid #CBEAE4;
+      white-space: nowrap;
+    }
+    .badge.warn { background: var(--warn-bg); color: var(--warn); border-color: #f1d3a4; }
+    .badge.danger { background: var(--danger-bg); color: var(--danger); border-color: #efbbbb; }
+    .badge.ok { background: var(--ok-bg); color: var(--ok); border-color: #b9dfca; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+    table { width: 100%; min-width: 1120px; border-collapse: collapse; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; line-height: 1.42; }
+    th { position: sticky; top: 0; background: #F5FBFA; z-index: 1; font-size: 12px; }
+    tbody tr:hover { background: #F7FCFB; }
+    .edit-select, .edit-input, .notes-input {
+      width: 100%;
+      min-width: 138px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    .edit-select, .edit-input { height: 36px; padding: 0 9px; }
+    .edit-input { margin-top: 6px; }
+    .notes-input {
+      min-width: 220px;
+      min-height: 70px;
+      padding: 8px 9px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .edit-cell { min-width: 160px; }
+    .notes-cell { min-width: 240px; }
+    .save-state {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #CBEAE4;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .empty { padding: 28px; border: 1px dashed #B8CBC7; border-radius: 8px; color: var(--muted); background: #FBFEFD; line-height: 1.7; }
+    .patient-list { display: grid; gap: 12px; }
+    .patient-row {
+      display: grid;
+      grid-template-columns: minmax(210px, 1.05fr) minmax(260px, 1.15fr) minmax(300px, 1.25fr) auto;
+      gap: 12px;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+    .patient-main h4 { margin: 0 0 8px; font-size: 17px; }
+    .patient-meta, .patient-stack { display: grid; gap: 8px; }
+    .patient-meta { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .patient-label { display: grid; gap: 5px; min-width: 0; }
+    .patient-label > span { color: var(--muted); font-size: 12px; }
+    .patient-label .edit-select,
+    .patient-label .edit-input,
+    .patient-label .notes-input { min-width: 0; }
+    .patient-label .notes-input { min-height: 82px; }
+    .patient-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+    .role-list, .test-grid { display: grid; gap: 12px; }
+    .test-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .box { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; }
+    .box h4 { margin: 0 0 10px; }
+    .box ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.7; }
+    .visit-chip { display: inline-flex; margin: 2px 4px 2px 0; padding: 3px 7px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); white-space: nowrap; }
+    .link-button {
+      border: 1px solid #CBEAE4;
+      border-radius: 8px;
+      min-height: 34px;
+      padding: 0 10px;
+      background: var(--soft);
+      color: var(--accent-dark);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .detail-page {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 48px rgba(23,33,36,.08);
+      overflow: hidden;
+    }
+    .detail-page.active { display: block; }
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #FBFEFD;
+    }
+    .detail-header h3 { margin: 0 0 6px; font-size: 22px; }
+    .detail-header p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .detail-body { padding: 18px; display: grid; gap: 16px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .detail-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: #fff;
+      min-height: 68px;
+    }
+    .detail-item span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .detail-item strong { display: block; font-size: 15px; line-height: 1.35; word-break: break-word; }
+    .detail-editor {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .detail-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+    .detail-card.full { grid-column: 1 / -1; }
+    .detail-card h4 { margin: 0 0 10px; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .detail-textarea {
+      width: 100%;
+      min-height: 132px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      resize: vertical;
+      line-height: 1.55;
+      font: inherit;
+    }
+    .summary-output {
+      min-height: 360px;
+      white-space: pre-wrap;
+      background: #F7FCFB;
+      color: var(--ink);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .form-grid .field { margin-bottom: 0; }
+    .form-grid input,
+    .form-grid select,
+    .form-grid textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    .form-grid input,
+    .form-grid select { height: 42px; padding: 0 12px; }
+    .form-grid textarea {
+      min-height: 88px;
+      padding: 10px 12px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .form-grid .wide { grid-column: 1 / -1; }
+    @media (max-width: 1020px) {
+      .login, .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .metrics, .test-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .patient-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .patient-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+      .topbar { flex-direction: column; align-items: stretch; }
+      .topbar-actions { justify-content: flex-start; }
+      .actions { justify-content: flex-start; }
+    }
+    @media (max-width: 720px) {
+      .main { padding: 18px; }
+      .metrics, .test-grid, .detail-grid, .detail-editor, .form-grid { grid-template-columns: 1fr; }
+      .patient-row { grid-template-columns: 1fr; }
+      .patient-actions { grid-column: auto; }
+      .toolbar, .panel-head { flex-direction: column; align-items: stretch; }
+      .search, select, input[type="date"] { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <section id="login" class="login">
+    <div class="login-copy">
+      <div>
+        <h1>會員關懷 Dashboard</h1>
+        <p>依照 Excel 名單建立員工登入入口。每位員工選擇自己的名字後，只會看到自己負責的顧問 1、顧問 2 或客服會員名單。</p>
+      </div>
+      <p>資料來源：01-1-.xlsx。基準日期預設為 2026-06-19，時區以 Asia/Taipei 的日曆天規則計算。</p>
+    </div>
+    <div class="login-panel">
+      <h2>選擇員工登入</h2>
+      <p>這是前端原型登入設計，用姓名篩選權責名單；正式上線時可再接帳號密碼或 Google / Microsoft SSO。</p>
+      <label class="field">員工姓名
+        <select id="employeeSelect"></select>
+      </label>
+      <button id="loginButton" class="primary" type="button">進入 Dashboard</button>
+    </div>
+  </section>
+
+  <section id="app" class="app">
+    <aside class="sidebar">
+      <div class="brand"><span>Member Care</span><b>員工工作台</b></div>
+      <div class="user-box"><strong id="currentUser">-</strong><span id="currentRoles">尚未登入</span></div>
+      <nav class="nav">
+        <button class="active" data-tab="mine">我的會員</button>
+        <button data-tab="threeDay">3 天關懷</button>
+        <button data-tab="service">客服追蹤</button>
+        <button data-tab="visits">回診日期</button>
+        <button data-tab="exceptions">資料異常</button>
+        <button data-tab="newMember">新增會員</button>
+        <button class="supervisor-only" data-tab="allMembers">全部會員</button>
+        <button class="supervisor-only" data-tab="employeeAdmin">員工管理</button>
+      </nav>
+      <button id="logoutButton" class="ghost" type="button">登出 / 切換員工</button>
+    </aside>
+    <main class="main">
+      <section class="topbar">
+        <div class="topbar-title">
+          <h2 id="pageTitle">我的會員名單</h2>
+        </div>
+        <div class="topbar-actions">
+          <label class="tool-field">基準日期<input id="baseDate" type="date" value="2026-06-19" /></label>
+          <button id="exportButton" class="ghost" type="button">匯出目前名單 Excel</button>
+          <label class="ghost file-button">匯入 Excel<input id="importFile" type="file" accept=".xlsx,.xls,.csv" /></label>
+        </div>
+      </section>
+      <div id="status" class="status">已載入原始 Excel：01-1-.xlsx <span id="saveState" class="save-state">自動存檔已啟用</span></div>
+      <section class="metrics">
+        <div class="metric"><span>我的會員</span><strong id="metricMine">0</strong></div>
+        <div class="metric"><span>3 天關懷</span><strong id="metricThreeDay">0</strong></div>
+        <div class="metric"><span>客服追蹤</span><strong id="metricService">0</strong></div>
+        <div class="metric"><span>資料異常</span><strong id="metricExceptions">0</strong></div>
+        <div class="metric"><span>全部資料</span><strong id="metricAll">0</strong></div>
+      </section>
+      <section class="workspace">
+        <div class="toolbar">
+          <div class="tabs">
+            <button class="tab active" data-tab="mine">我的會員</button>
+            <button class="tab" data-tab="threeDay">3 天關懷</button>
+            <button class="tab" data-tab="service">客服</button>
+            <button class="tab" data-tab="visits">日期</button>
+            <button class="tab" data-tab="exceptions">異常</button>
+            <button class="tab" data-tab="newMember">新增會員</button>
+            <button class="tab supervisor-only" data-tab="allMembers">全部會員</button>
+            <button class="tab supervisor-only" data-tab="employeeAdmin">員工管理</button>
+          </div>
+          <input id="search" class="search" type="search" placeholder="搜尋姓名、備註、區域、角色" />
+        </div>
+        <div id="mine" class="panel active">
+          <div class="panel-head"><div><h3>我的會員</h3><p>列出登入員工在顧問 1、顧問 2、客服任一角色負責的會員。</p></div><span id="mineBadge" class="badge">0 筆</span></div>
+          <div id="mineTable"></div>
+        </div>
+        <div id="threeDay" class="panel">
+          <div class="panel-head"><div><h3>回診前 3 天關懷</h3><p>只列出下一次回診日期距離基準日剛好 3 天的會員。</p></div><span id="threeDayBadge" class="badge">0 筆</span></div>
+          <div id="threeDayTable"></div>
+        </div>
+        <div id="service" class="panel">
+          <div class="panel-head"><div><h3>客服追蹤</h3><p>列出登入員工作為客服、或會員有客服提醒 / 備註 / 看診狀態的追蹤資料。</p></div><span id="serviceBadge" class="badge">0 筆</span></div>
+          <div id="serviceTable"></div>
+        </div>
+        <div id="visits" class="panel">
+          <div class="panel-head"><div><h3>回診日期總覽</h3><p>每位會員的下一次回診日與歷次回診日。</p></div><span id="visitsBadge" class="badge">0 筆</span></div>
+          <div id="visitsTable"></div>
+        </div>
+        <div id="exceptions" class="panel">
+          <div class="panel-head"><div><h3>資料異常</h3><p>缺少姓名、角色或回診日期的資料會出現在這裡。</p></div><span id="exceptionsBadge" class="badge warn">0 筆</span></div>
+          <div id="exceptionsTable"></div>
+        </div>
+        <div id="newMember" class="panel">
+          <div class="panel-head"><div><h3>新增會員資料</h3><p>新增後會存到目前瀏覽器，並立即出現在負責員工的會員名單。</p></div><span class="badge">本機保存</span></div>
+          <form id="newMemberForm" class="form-grid">
+            <label class="field">區域<input name="區域" placeholder="台北 / 台中 / 高雄" /></label>
+            <label class="field">方案內容<select name="方案內容"><option value="">請選擇</option><option>一年期</option><option>二年期</option><option>三年期</option></select></label>
+            <label class="field">姓名<input name="姓名" required placeholder="會員姓名" /></label>
+            <label class="field">生日<input name="生日" placeholder="例如 580208" /></label>
+            <label class="field">顧問1<input name="顧問1" placeholder="預設可填登入者" /></label>
+            <label class="field">顧問2<input name="顧問2" placeholder="顧問2姓名" /></label>
+            <label class="field">客服<input name="客服" placeholder="客服姓名" /></label>
+            <label class="field">下一次回診日期<input name="下一次回診日期" type="date" /></label>
+            <label class="field">看診狀態<select name="看診狀態"><option value="">請選擇</option><option>雲端</option><option>兩週回診</option><option>四週回診</option><option>電話問診</option><option>未交付</option></select></label>
+            <label class="field">類型<select name="類型"><option value="">請選擇</option><option>自主管理</option><option>需要引導</option><option>低配合</option></select></label>
+            <label class="field">客服提醒<select name="客服提醒"><option value="">請選擇</option><option>發送</option><option>不發送</option></select></label>
+            <label class="field wide">備註<textarea name="備註" placeholder="可輸入備註"></textarea></label>
+            <div class="actions wide">
+              <button class="primary" type="submit">儲存新增會員</button>
+              <button class="ghost" type="reset">清空</button>
+            </div>
+          </form>
+        </div>
+        <div id="allMembers" class="panel">
+          <div class="panel-head"><div><h3>全部會員</h3><p>主管可查看並管理所有會員資料，不受登入員工負責名單限制。</p></div><span id="allMembersBadge" class="badge">0 筆</span></div>
+          <div id="allMembersTable"></div>
+        </div>
+        <div id="employeeAdmin" class="panel">
+          <div class="panel-head"><div><h3>員工管理</h3><p>僅主管可新增或刪除員工帳號，並設定可被指派的角色。</p></div><span class="badge">主管權限</span></div>
+          <form id="employeeAccountForm" class="account-form">
+            <label class="field">員工姓名
+              <input id="newEmployeeName" type="text" placeholder="輸入員工姓名" />
+            </label>
+            <div class="role-checks" aria-label="員工角色">
+              <label><input type="checkbox" name="roles" value="顧問1" />顧問1</label>
+              <label><input type="checkbox" name="roles" value="顧問2" />顧問2</label>
+              <label><input type="checkbox" name="roles" value="客服" />客服</label>
+            </div>
+            <button class="primary" type="submit">新增員工帳號</button>
+          </form>
+          <div id="employeeAccountList" class="employee-list"></div>
+        </div>
+      </section>
+      <section id="detailPage" class="detail-page">
+        <div class="detail-header">
+          <div>
+            <h3 id="detailName">會員資料頁</h3>
+            <p id="detailSubtitle">可維護資料狀態，並整理 APP 後台、電話或訊息關懷、上次回診 CC。</p>
+          </div>
+          <div class="actions">
+            <button class="primary" type="button" onclick="saveCurrentPatientPage()">儲存</button>
+            <button class="ghost" type="button" onclick="closePatientPage()">返回名單</button>
+          </div>
+        </div>
+        <div class="detail-body">
+          <div id="detailOverview" class="detail-grid"></div>
+          <div class="detail-card full">
+            <h4>資料狀態維護</h4>
+            <div id="detailStatusEditor" class="detail-editor"></div>
+          </div>
+          <div class="detail-editor">
+            <div class="detail-card">
+              <h4>APP 內陪伴紀錄內容</h4>
+              <textarea id="detailAppRecord" class="detail-textarea" placeholder="貼上 APP 後台紀錄"></textarea>
+            </div>
+            <div class="detail-card">
+              <h4>電話關懷後會員反饋內容</h4>
+              <textarea id="detailPhoneRecord" class="detail-textarea" placeholder="貼上電話關懷後症狀紀錄"></textarea>
+            </div>
+            <div class="detail-card">
+              <h4>訊息關懷後會員反饋內容</h4>
+              <textarea id="detailMessageRecord" class="detail-textarea" placeholder="貼上 LINE / 簡訊回覆；未回覆可填已發送但未回覆"></textarea>
+            </div>
+            <div class="detail-card">
+              <h4>上次回診後第 2 天客服關懷紀錄</h4>
+              <textarea id="detailDay2Record" class="detail-textarea" placeholder="貼上第 2 天客服關懷紀錄"></textarea>
+            </div>
+            <div class="detail-card">
+              <h4>歷次回診摘要 / 上次回診 CC</h4>
+              <textarea id="detailCcRecord" class="detail-textarea" placeholder="貼上上次回診 CC 或歷次回診摘要"></textarea>
+            </div>
+            <div class="detail-card">
+              <h4>其他補充資訊</h4>
+              <textarea id="detailOtherRecord" class="detail-textarea" placeholder="家屬期望、顧問補充、客服備註、特殊狀況等"></textarea>
+            </div>
+            <div class="detail-card full">
+              <h4>症狀趨勢摘要</h4>
+              <div class="button-row">
+                <button class="primary" type="button" onclick="generatePatientSummary()">產生固定格式摘要</button>
+                <button class="ghost" type="button" onclick="fillSampleConcernRecord()">帶入 6/18 範例</button>
+              </div>
+              <textarea id="detailSummaryOutput" class="detail-textarea summary-output" placeholder="產生後可再人工微調，修改也會自動存檔。"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script>
+    let DATA = {"summary": {"source": "01-1-.xlsx", "baseDate": "2026-06-19", "total": 124, "threeDay": 7, "exceptions": 9, "employees": 23, "regions": {"台北": 90, "台中": 17, "高雄": 17}}, "employees": ["張雅馨", "李昀儒", "李濟柔", "李盈蓁", "林娟帆", "林家君", "林羿君", "楊淙杰", "祁瑄", "蔡幸昀", "蘇貴鈴", "袁羽宣", "許馨予", "趙巧瑋", "邱坤毅", "郭佳鈞", "陳儀琳", "陳怡諠", "陳欣怡", "陳毅勛", "高敏軒", "高羽婕", "黃芝霖"], "rows": [{"區域": "台北", "編號": "1", "方案內容": "1年期", "姓名": "李昭慶", "生日": "580208", "顧問1": "陳欣怡", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L2+6,\"mm/dd\")", "顧問2前3天欄": "=Q2-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q2+2,\"mm/dd\")", "顧問2前3天欄": "=V2-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V2+2,\"mm/dd\")", "顧問2前3天欄": "=AA2-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA2+2,\"mm/dd\")", "顧問2前3天欄": "=AF2-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF2+2,\"mm/dd\")", "顧問2前3天欄": "=AK2-3"}, {"序": 6, "回診日期": "2026-05-26", "客服欄": "=TEXT(AK2+2,\"mm/dd\")", "顧問2前3天欄": "=AP2-3"}, {"序": 7, "回診日期": "2026-06-09", "客服欄": "=TEXT(AP2+2,\"mm/dd\")", "顧問2前3天欄": "=AU2-3"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU2+2,\"mm/dd\")", "顧問2前3天欄": "=AZ2-3"}], "回診次數": 8, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-1-李昭慶"}, {"區域": "台北", "編號": "2", "方案內容": "1年期", "姓名": "張代昀", "生日": "600111", "顧問1": "陳欣怡", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L3+6,\"mm/dd\")", "顧問2前3天欄": "=Q3-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q3+2,\"mm/dd\")", "顧問2前3天欄": "=V3-3"}, {"序": 3, "回診日期": "2026-04-14", "客服欄": "=TEXT(V3+2,\"mm/dd\")", "顧問2前3天欄": "=AA3-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA3+2,\"mm/dd\")", "顧問2前3天欄": "=AF3-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF3+2,\"mm/dd\")", "顧問2前3天欄": "=AK3-3"}, {"序": 6, "回診日期": "2026-05-29", "客服欄": "=TEXT(AK3+2,\"mm/dd\")", "顧問2前3天欄": "=AP3-3"}, {"序": 7, "回診日期": "2026-06-12", "客服欄": "=TEXT(AP3+2,\"mm/dd\")", "顧問2前3天欄": "=AU3-3"}, {"序": 8, "回診日期": "2026-06-30", "客服欄": "=TEXT(AU3+2,\"mm/dd\")", "顧問2前3天欄": "=AZ3-3"}], "回診次數": 8, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-2-張代昀"}, {"區域": "台北", "編號": "3", "方案內容": "1年期", "姓名": "郭慧美", "生日": "571220", "顧問1": "林家君", "顧問2": "張雅馨", "客服": "李盈蓁", "看診狀態": "4週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-02-26", "客服欄": "=TEXT(L4+6,\"mm/dd\")", "顧問2前3天欄": "=Q4-3"}, {"序": 2, "回診日期": "2026-03-12", "客服欄": "=TEXT(Q4+2,\"mm/dd\")", "顧問2前3天欄": "=V4-3"}, {"序": 3, "回診日期": "2026-03-26", "客服欄": "=TEXT(V4+2,\"mm/dd\")", "顧問2前3天欄": "=AA4-3"}, {"序": 4, "回診日期": "2026-04-27", "客服欄": "=TEXT(AA4+2,\"mm/dd\")", "顧問2前3天欄": "=AF4-3"}, {"序": 5, "回診日期": "2026-05-21", "客服欄": "=TEXT(AF4+2,\"mm/dd\")", "顧問2前3天欄": "=AK4-3"}, {"序": 6, "回診日期": "2026-06-25", "客服欄": "=TEXT(AK4+2,\"mm/dd\")", "顧問2前3天欄": "=AP4-3"}], "回診次數": 6, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-3-郭慧美"}, {"區域": "台北", "編號": "4", "方案內容": "2年期", "姓名": "鄧文堅", "生日": "431101", "顧問1": "林家君", "顧問2": "祁瑄", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "院長特許3週回診/\n紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L5+6,\"mm/dd\")", "顧問2前3天欄": "=Q5-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q5+2,\"mm/dd\")", "顧問2前3天欄": "=V5-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V5+2,\"mm/dd\")", "顧問2前3天欄": "=AA5-3"}, {"序": 4, "回診日期": "2026-04-14", "客服欄": "=TEXT(AA5+2,\"mm/dd\")", "顧問2前3天欄": "=AF5-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF5+2,\"mm/dd\")", "顧問2前3天欄": "=AK5-3"}, {"序": 6, "回診日期": "2026-05-14", "客服欄": "=TEXT(AK5+2,\"mm/dd\")", "顧問2前3天欄": "=AP5-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP5+2,\"mm/dd\")", "顧問2前3天欄": "=AU5-3"}, {"序": 8, "回診日期": "2026-06-09", "客服欄": "=TEXT(AU5+2,\"mm/dd\")", "顧問2前3天欄": "=AZ5-3"}, {"序": 9, "回診日期": "2026-06-23", "客服欄": "=TEXT(AZ5+2,\"mm/dd\")", "顧問2前3天欄": "=BE5-3"}, {"序": 10, "回診日期": "2026-07-07", "客服欄": "=TEXT(BE5+2,\"mm/dd\")", "顧問2前3天欄": "=BJ5-3"}], "回診次數": 10, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-4-鄧文堅"}, {"區域": "台北", "編號": "5", "方案內容": "2年期", "姓名": "葉偉夫", "生日": "431209", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "太太協助回覆", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L6+6,\"mm/dd\")", "顧問2前3天欄": "=Q6-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q6+2,\"mm/dd\")", "顧問2前3天欄": "=V6-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V6+2,\"mm/dd\")", "顧問2前3天欄": "=AA6-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA6+2,\"mm/dd\")", "顧問2前3天欄": "=AF6-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF6+2,\"mm/dd\")", "顧問2前3天欄": "=AK6-3"}, {"序": 6, "回診日期": "2026-06-02", "客服欄": "=TEXT(AK6+2,\"mm/dd\")", "顧問2前3天欄": "=AP6-3"}, {"序": 7, "回診日期": "2026-06-16", "客服欄": "=TEXT(AP6+2,\"mm/dd\")", "顧問2前3天欄": "=AU6-3"}, {"序": 8, "回診日期": "2026-06-30", "客服欄": "=TEXT(AU6+2,\"mm/dd\")", "顧問2前3天欄": "=AZ6-3"}, {"序": 9, "回診日期": "2026-07-14", "客服欄": "=TEXT(AZ6+2,\"mm/dd\")", "顧問2前3天欄": "=BE6-3"}], "回診次數": 9, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-5-葉偉夫"}, {"區域": "台北", "編號": "6", "方案內容": "3年期", "姓名": "陳彥妃", "生日": "580512", "顧問1": "陳毅勛", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-06", "客服欄": "=TEXT(L7+6,\"mm/dd\")", "顧問2前3天欄": "=Q7-3"}, {"序": 2, "回診日期": "2026-03-20", "客服欄": "=TEXT(Q7+2,\"mm/dd\")", "顧問2前3天欄": "=V7-3"}, {"序": 3, "回診日期": "2026-04-14", "客服欄": "=TEXT(V7+2,\"mm/dd\")", "顧問2前3天欄": "=AA7-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA7+2,\"mm/dd\")", "顧問2前3天欄": "=AF7-3"}, {"序": 5, "回診日期": "2026-05-19", "客服欄": "=TEXT(AF7+2,\"mm/dd\")", "顧問2前3天欄": "=AK7-3"}, {"序": 6, "回診日期": "2026-06-09", "客服欄": "=TEXT(AK7+2,\"mm/dd\")", "顧問2前3天欄": "=AP7-3"}, {"序": 7, "回診日期": "2026-06-23", "客服欄": "", "顧問2前3天欄": "=AU7-3"}], "回診次數": 7, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-6-陳彥妃"}, {"區域": "台北", "編號": "7", "方案內容": "1年期", "姓名": "廖紫涵", "生日": "511115", "顧問1": "陳毅勛", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診（致電時間：10:00~12:00，週六千萬不要致電）", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-02-24", "客服欄": "=TEXT(L8+6,\"mm/dd\")", "顧問2前3天欄": "=Q8-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q8+2,\"mm/dd\")", "顧問2前3天欄": "=V8-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V8+2,\"mm/dd\")", "顧問2前3天欄": "=AA8-3"}, {"序": 4, "回診日期": "2026-04-14", "客服欄": "=TEXT(AA8+2,\"mm/dd\")", "顧問2前3天欄": "=AF8-3"}, {"序": 5, "回診日期": "2026-04-28", "客服欄": "=TEXT(AF8+2,\"mm/dd\")", "顧問2前3天欄": "=AK8-3"}, {"序": 6, "回診日期": "2026-05-12", "客服欄": "=TEXT(AK8+2,\"mm/dd\")", "顧問2前3天欄": "=AP8-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP8+2,\"mm/dd\")", "顧問2前3天欄": "=AU8-3"}, {"序": 8, "回診日期": "2026-06-09", "客服欄": "=TEXT(AU8+2,\"mm/dd\")", "顧問2前3天欄": "=AZ8-3"}, {"序": 9, "回診日期": "2026-06-23", "客服欄": "=TEXT(AZ8+2,\"mm/dd\")", "顧問2前3天欄": "=BE8-3"}, {"序": 10, "回診日期": "2026-07-14", "客服欄": "=TEXT(BE8+2,\"mm/dd\")", "顧問2前3天欄": "=BJ8-3"}], "回診次數": 10, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-7-廖紫涵"}, {"區域": "台北", "編號": "8", "方案內容": "1年期", "姓名": "劉元仁", "生日": "340725", "顧問1": "林家君", "顧問2": "蔡幸昀", "客服": "李盈蓁", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L9+6,\"mm/dd\")", "顧問2前3天欄": "=Q9-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q9+2,\"mm/dd\")", "顧問2前3天欄": "=V9-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V9+2,\"mm/dd\")", "顧問2前3天欄": "=AA9-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA9+2,\"mm/dd\")", "顧問2前3天欄": "=AF9-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF9+2,\"mm/dd\")", "顧問2前3天欄": "=AK9-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK9+2,\"mm/dd\")", "顧問2前3天欄": "=AP9-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP9+2,\"mm/dd\")", "顧問2前3天欄": "=AU9-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU9+2,\"mm/dd\")", "顧問2前3天欄": "=AZ9-3"}, {"序": 9, "回診日期": "2026-06-30", "客服欄": "=TEXT(AZ9+2,\"mm/dd\")", "顧問2前3天欄": "=BE9-3"}, {"序": 10, "回診日期": "2026-07-14", "客服欄": "=TEXT(BE9+2,\"mm/dd\")", "顧問2前3天欄": "=BJ9-3"}], "回診次數": 10, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-8-劉元仁"}, {"區域": "台北", "編號": "9", "方案內容": "2年期", "姓名": "陳靜宛", "生日": "441014", "顧問1": "林羿君", "顧問2": "張雅馨", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L10+6,\"mm/dd\")", "顧問2前3天欄": "=Q10-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q10+2,\"mm/dd\")", "顧問2前3天欄": "=V10-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V10+2,\"mm/dd\")", "顧問2前3天欄": "=AA10-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA10+2,\"mm/dd\")", "顧問2前3天欄": "=AF10-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF10+2,\"mm/dd\")", "顧問2前3天欄": "=AK10-3"}, {"序": 6, "回診日期": "2026-06-02", "客服欄": "=TEXT(AK10+2,\"mm/dd\")", "顧問2前3天欄": "=AP10-3"}, {"序": 7, "回診日期": "2026-06-23", "客服欄": "=TEXT(AP10+2,\"mm/dd\")", "顧問2前3天欄": "=AU10-3"}], "回診次數": 7, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-9-陳靜宛"}, {"區域": "台北", "編號": "10", "方案內容": "1年期", "姓名": "張拿珠", "生日": "440910", "顧問1": "陳毅勛", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L11+6,\"mm/dd\")", "顧問2前3天欄": "=Q11-3"}, {"序": 2, "回診日期": "2026-04-07", "客服欄": "=TEXT(Q11+2,\"mm/dd\")", "顧問2前3天欄": "=V11-3"}, {"序": 3, "回診日期": "2026-04-21", "客服欄": "=TEXT(V11+2,\"mm/dd\")", "顧問2前3天欄": "=AA11-3"}, {"序": 4, "回診日期": "2026-05-05", "客服欄": "=TEXT(AA11+2,\"mm/dd\")", "顧問2前3天欄": "=AF11-3"}, {"序": 5, "回診日期": "2026-05-19", "客服欄": "=TEXT(AF11+2,\"mm/dd\")", "顧問2前3天欄": "=AK11-3"}, {"序": 6, "回診日期": "2026-06-02", "客服欄": "=TEXT(AK11+2,\"mm/dd\")", "顧問2前3天欄": "=AP11-3"}, {"序": 7, "回診日期": "2026-06-20", "客服欄": "=TEXT(AP11+2,\"mm/dd\")", "顧問2前3天欄": "=AU11-3"}, {"序": 8, "回診日期": "2026-06-30", "客服欄": "=TEXT(AU11+2,\"mm/dd\")", "顧問2前3天欄": "=AZ11-3"}], "回診次數": 8, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-10-張拿珠"}, {"區域": "台北", "編號": "11", "方案內容": "1年期", "姓名": "呂岱凌", "生日": "500602", "顧問1": "林羿君", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-03-05", "客服欄": "=TEXT(L12+6,\"mm/dd\")", "顧問2前3天欄": "=Q12-3"}, {"序": 2, "回診日期": "2026-03-19", "客服欄": "=TEXT(Q12+2,\"mm/dd\")", "顧問2前3天欄": "=V12-3"}, {"序": 3, "回診日期": "2026-04-02", "客服欄": "=TEXT(V12+2,\"mm/dd\")", "顧問2前3天欄": "=AA12-3"}, {"序": 4, "回診日期": "2026-04-16", "客服欄": "=TEXT(AA12+2,\"mm/dd\")", "顧問2前3天欄": "=AF12-3"}, {"序": 5, "回診日期": "2026-04-30", "客服欄": "=TEXT(AF12+2,\"mm/dd\")", "顧問2前3天欄": "=AK12-3"}, {"序": 6, "回診日期": "2026-05-14", "客服欄": "=TEXT(AK12+2,\"mm/dd\")", "顧問2前3天欄": "=AP12-3"}, {"序": 7, "回診日期": "2026-05-28", "客服欄": "=TEXT(AP12+2,\"mm/dd\")", "顧問2前3天欄": "=AU12-3"}, {"序": 8, "回診日期": "2026-06-11", "客服欄": "=TEXT(AU12+2,\"mm/dd\")", "顧問2前3天欄": "=AZ12-3"}, {"序": 9, "回診日期": "2026-06-25", "客服欄": "=TEXT(AZ12+2,\"mm/dd\")", "顧問2前3天欄": "=BE12-3"}, {"序": 10, "回診日期": "2026-07-09", "客服欄": "=TEXT(BE12+2,\"mm/dd\")", "顧問2前3天欄": "=BJ12-3"}], "回診次數": 10, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-11-呂岱凌"}, {"區域": "台北", "編號": "12", "方案內容": "3年期", "姓名": "蔡耕宇", "生日": "600330", "顧問1": "林羿君", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "不發送", "備註": "紅字線上問診", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "2026-02-27", "客服欄": "=TEXT(L13+6,\"mm/dd\")", "顧問2前3天欄": "=Q13-3"}, {"序": 2, "回診日期": "2026-03-16", "客服欄": "=TEXT(Q13+2,\"mm/dd\")", "顧問2前3天欄": "=V13-3"}, {"序": 3, "回診日期": "2026-03-30", "客服欄": "=TEXT(V13+2,\"mm/dd\")", "顧問2前3天欄": "=AA13-3"}, {"序": 4, "回診日期": "2026-04-13", "客服欄": "=TEXT(AA13+2,\"mm/dd\")", "顧問2前3天欄": "=AF13-3"}, {"序": 5, "回診日期": "2026-04-27", "客服欄": "=TEXT(AF13+2,\"mm/dd\")", "顧問2前3天欄": "=AK13-3"}, {"序": 6, "回診日期": "2026-05-11", "客服欄": "=TEXT(AK13+2,\"mm/dd\")", "顧問2前3天欄": "=AP13-3"}, {"序": 7, "回診日期": "2026-06-08", "客服欄": "=TEXT(AP13+2,\"mm/dd\")", "顧問2前3天欄": "=AU13-3"}, {"序": 8, "回診日期": "2026-06-22", "客服欄": "=TEXT(AU13+2,\"mm/dd\")", "顧問2前3天欄": "=AZ13-3"}], "回診次數": 8, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-12-蔡耕宇"}, {"區域": "台北", "編號": "13", "方案內容": "2年期", "姓名": "顏炳煌", "生日": "410712", "顧問1": "陳毅勛", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "發送", "備註": "都由女兒顏如玉聯繫，紅字線上問診", "回診日期": "2026-06-11", "所有回診": [{"序": 1, "回診日期": "2026-02-14", "客服欄": "=TEXT(L14+6,\"mm/dd\")", "顧問2前3天欄": "=Q14-3"}, {"序": 2, "回診日期": "2026-03-25", "客服欄": "=TEXT(Q14+2,\"mm/dd\")", "顧問2前3天欄": "=V14-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA14+2,\"mm/dd\")", "顧問2前3天欄": "=AF14-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF14+2,\"mm/dd\")", "顧問2前3天欄": "=AK14-3"}, {"序": 6, "回診日期": "2026-06-11", "客服欄": "=TEXT(AK14+2,\"mm/dd\")", "顧問2前3天欄": "=AP14-3"}], "回診次數": 5, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-13-顏炳煌"}, {"區域": "台北", "編號": "14", "方案內容": "1年期", "姓名": "王玉蘭", "生日": "421029", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "2026-03-02", "客服欄": "=TEXT(L15+6,\"mm/dd\")", "顧問2前3天欄": "=Q15-3"}, {"序": 2, "回診日期": "2026-03-23", "客服欄": "=TEXT(Q15+2,\"mm/dd\")", "顧問2前3天欄": "=V15-3"}, {"序": 3, "回診日期": "2026-04-13", "客服欄": "=TEXT(V15+2,\"mm/dd\")", "顧問2前3天欄": "=AA15-3"}, {"序": 4, "回診日期": "2026-04-27", "客服欄": "=TEXT(AA15+2,\"mm/dd\")", "顧問2前3天欄": "=AF15-3"}, {"序": 5, "回診日期": "2026-05-11", "客服欄": "=TEXT(AF15+2,\"mm/dd\")", "顧問2前3天欄": "=AK15-3"}, {"序": 6, "回診日期": "2026-05-25", "客服欄": "=TEXT(AK15+2,\"mm/dd\")", "顧問2前3天欄": "=AP15-3"}, {"序": 7, "回診日期": "2026-06-08", "客服欄": "=TEXT(AP15+2,\"mm/dd\")", "顧問2前3天欄": "=AU15-3"}, {"序": 8, "回診日期": "2026-06-22", "客服欄": "=TEXT(AU15+2,\"mm/dd\")", "顧問2前3天欄": "=AZ15-3"}, {"序": 9, "回診日期": "2026-07-06", "客服欄": "=TEXT(AZ15+2,\"mm/dd\")", "顧問2前3天欄": "=BE15-3"}], "回診次數": 9, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-14-王玉蘭"}, {"區域": "台北", "編號": "15", "方案內容": "1年期", "姓名": "徐靜菲", "生日": "540525", "顧問1": "陳毅勛", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-03-12", "客服欄": "=TEXT(L16+6,\"mm/dd\")", "顧問2前3天欄": "=Q16-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q16+2,\"mm/dd\")", "顧問2前3天欄": "=V16-3"}, {"序": 3, "回診日期": "2026-04-11", "客服欄": "=TEXT(V16+2,\"mm/dd\")", "顧問2前3天欄": "=AA16-3"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AA16+2,\"mm/dd\")", "顧問2前3天欄": "=AF16-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF16+2,\"mm/dd\")", "顧問2前3天欄": "=AK16-3"}, {"序": 6, "回診日期": "2026-05-09", "客服欄": "=TEXT(AK16+2,\"mm/dd\")", "顧問2前3天欄": "=AP16-3"}, {"序": 7, "回診日期": "2026-05-23", "客服欄": "=TEXT(AP16+2,\"mm/dd\")", "顧問2前3天欄": "=AU16-3"}, {"序": 8, "回診日期": "2026-06-06", "客服欄": "=TEXT(AU16+2,\"mm/dd\")", "顧問2前3天欄": "=AZ16-3"}, {"序": 9, "回診日期": "2026-06-11", "客服欄": "=TEXT(AZ16+2,\"mm/dd\")", "顧問2前3天欄": "=BE16-3"}, {"序": 10, "回診日期": "2026-06-25", "客服欄": "=TEXT(BE16+2,\"mm/dd\")", "顧問2前3天欄": "=BJ16-3"}], "回診次數": 10, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-15-徐靜菲"}, {"區域": "台北", "編號": "16", "方案內容": "1年期", "姓名": "鄭美玲", "生日": "500303", "顧問1": "陳毅勛", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "6/6取消回診", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L17+6,\"mm/dd\")", "顧問2前3天欄": "=Q17-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q17+2,\"mm/dd\")", "顧問2前3天欄": "=V17-3"}, {"序": 3, "回診日期": "2026-04-11", "客服欄": "=TEXT(V17+2,\"mm/dd\")", "顧問2前3天欄": "=AA17-3"}, {"序": 4, "回診日期": "2026-04-25", "客服欄": "=TEXT(AA17+2,\"mm/dd\")", "顧問2前3天欄": "=AF17-3"}, {"序": 5, "回診日期": "2026-05-09", "客服欄": "=TEXT(AF17+2,\"mm/dd\")", "顧問2前3天欄": "=AK17-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK17+2,\"mm/dd\")", "顧問2前3天欄": "=AP17-3"}, {"序": 7, "回診日期": "2026-06-06", "客服欄": "=TEXT(AP17+2,\"mm/dd\")", "顧問2前3天欄": "=AU17-3"}, {"序": 8, "回診日期": "2026-06-20", "客服欄": "=TEXT(AU17+2,\"mm/dd\")", "顧問2前3天欄": "=AZ17-3"}], "回診次數": 8, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-16-鄭美玲"}, {"區域": "台北", "編號": "17", "方案內容": "1年期", "姓名": "吳連春", "生日": "480702", "顧問1": "陳毅勛", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "6/6取消回診", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L18+6,\"mm/dd\")", "顧問2前3天欄": "=Q18-3"}, {"序": 2, "回診日期": "2026-04-11", "客服欄": "=TEXT(Q18+2,\"mm/dd\")", "顧問2前3天欄": "=V18-3"}, {"序": 3, "回診日期": "2026-04-25", "客服欄": "=TEXT(V18+2,\"mm/dd\")", "顧問2前3天欄": "=AA18-3"}, {"序": 4, "回診日期": "2026-04-25", "客服欄": "=TEXT(AA18+2,\"mm/dd\")", "顧問2前3天欄": "=AF18-3"}, {"序": 5, "回診日期": "2026-05-09", "客服欄": "=TEXT(AF18+2,\"mm/dd\")", "顧問2前3天欄": "=AK18-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK18+2,\"mm/dd\")", "顧問2前3天欄": "=AP18-3"}, {"序": 7, "回診日期": "2026-06-06", "客服欄": "=TEXT(AP18+2,\"mm/dd\")", "顧問2前3天欄": "=AU18-3"}, {"序": 8, "回診日期": "2026-06-20", "客服欄": "=TEXT(AU18+2,\"mm/dd\")", "顧問2前3天欄": "=AZ18-3"}], "回診次數": 8, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-17-吳連春"}, {"區域": "台北", "編號": "18", "方案內容": "1年期", "姓名": "楊則森", "生日": "610413", "顧問1": "林家君", "顧問2": "李濟柔", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-07-07", "所有回診": [{"序": 1, "回診日期": "2026-02-24", "客服欄": "=TEXT(L19+6,\"mm/dd\")", "顧問2前3天欄": "=Q19-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q19+2,\"mm/dd\")", "顧問2前3天欄": "=V19-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V19+2,\"mm/dd\")", "顧問2前3天欄": "=AA19-3"}, {"序": 4, "回診日期": "2026-04-17", "客服欄": "=TEXT(AA19+2,\"mm/dd\")", "顧問2前3天欄": "=AF19-3"}, {"序": 5, "回診日期": "2026-05-01", "客服欄": "=TEXT(AF19+2,\"mm/dd\")", "顧問2前3天欄": "=AK19-3"}, {"序": 6, "回診日期": "2026-05-15", "客服欄": "=TEXT(AK19+2,\"mm/dd\")", "顧問2前3天欄": "=AP19-3"}, {"序": 7, "回診日期": "2026-05-29", "客服欄": "=TEXT(AP19+2,\"mm/dd\")", "顧問2前3天欄": "=AU19-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU19+2,\"mm/dd\")", "顧問2前3天欄": "=AZ19-3"}, {"序": 9, "回診日期": "2026-07-07", "客服欄": "=TEXT(AZ19+2,\"mm/dd\")", "顧問2前3天欄": "=BE19-3"}], "回診次數": 9, "下一次回診日期": "2026-07-07", "距離天數": 18, "回診前3天": false, "資料異常": [], "__id": "台北-18-楊則森"}, {"區域": "台北", "編號": "19", "方案內容": "1年期", "姓名": "賴春賢", "生日": "390909", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L20+6,\"mm/dd\")", "顧問2前3天欄": "=Q20-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q20+2,\"mm/dd\")", "顧問2前3天欄": "=V20-3"}, {"序": 3, "回診日期": "2026-04-17", "客服欄": "=TEXT(V20+2,\"mm/dd\")", "顧問2前3天欄": "=AA20-3"}, {"序": 4, "回診日期": "2026-05-09", "客服欄": "=TEXT(AA20+2,\"mm/dd\")", "顧問2前3天欄": "=AF20-3"}, {"序": 5, "回診日期": "2026-05-23", "客服欄": "=TEXT(AF20+2,\"mm/dd\")", "顧問2前3天欄": "=AK20-3"}, {"序": 6, "回診日期": "2026-06-06", "客服欄": "=TEXT(AK20+2,\"mm/dd\")", "顧問2前3天欄": "=AP20-3"}, {"序": 7, "回診日期": "2026-06-20", "客服欄": "=TEXT(AP20+2,\"mm/dd\")", "顧問2前3天欄": "=AU20-3"}], "回診次數": 7, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-19-賴春賢"}, {"區域": "台北", "編號": "20", "方案內容": "1年期", "姓名": "顏舒薇", "生日": "590721", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "6/17~7/17出國", "回診日期": "2026-07-21", "所有回診": [{"序": 1, "回診日期": "2026-02-24", "客服欄": "=TEXT(L21+6,\"mm/dd\")", "顧問2前3天欄": "=Q21-3"}, {"序": 2, "回診日期": "2026-03-28", "客服欄": "=TEXT(Q21+2,\"mm/dd\")", "顧問2前3天欄": "=V21-3"}, {"序": 3, "回診日期": "2026-04-11", "客服欄": "=TEXT(V21+2,\"mm/dd\")", "顧問2前3天欄": "=AA21-3"}, {"序": 4, "回診日期": "2026-04-25", "客服欄": "=TEXT(AA21+2,\"mm/dd\")", "顧問2前3天欄": "=AF21-3"}, {"序": 5, "回診日期": "2026-05-09", "客服欄": "=TEXT(AF21+2,\"mm/dd\")", "顧問2前3天欄": "=AK21-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK21+2,\"mm/dd\")", "顧問2前3天欄": "=AP21-3"}, {"序": 7, "回診日期": "2026-06-06", "客服欄": "=TEXT(AP21+2,\"mm/dd\")", "顧問2前3天欄": "=AU21-3"}, {"序": 8, "回診日期": "2026-07-21", "客服欄": "=TEXT(AU21+2,\"mm/dd\")", "顧問2前3天欄": "=AZ21-3"}], "回診次數": 8, "下一次回診日期": "2026-07-21", "距離天數": 32, "回診前3天": false, "資料異常": [], "__id": "台北-20-顏舒薇"}, {"區域": "台北", "編號": "21", "方案內容": "1年期", "姓名": "鄒采璇", "生日": "930309", "顧問1": "陳欣怡", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L22+6,\"mm/dd\")", "顧問2前3天欄": "=Q22-3"}, {"序": 2, "回診日期": "2026-04-03", "客服欄": "=TEXT(Q22+2,\"mm/dd\")", "顧問2前3天欄": "=V22-3"}, {"序": 3, "回診日期": "2026-04-21", "客服欄": "=TEXT(V22+2,\"mm/dd\")", "顧問2前3天欄": "=AA22-3"}, {"序": 4, "回診日期": "2026-05-05", "客服欄": "=TEXT(AA22+2,\"mm/dd\")", "顧問2前3天欄": "=AF22-3"}, {"序": 5, "回診日期": "2026-05-19", "客服欄": "=TEXT(AF22+2,\"mm/dd\")", "顧問2前3天欄": "=AK22-3"}, {"序": 6, "回診日期": "2026-06-02", "客服欄": "=TEXT(AK22+2,\"mm/dd\")", "顧問2前3天欄": "=AP22-3"}, {"序": 7, "回診日期": "2026-06-16", "客服欄": "=TEXT(AP22+2,\"mm/dd\")", "顧問2前3天欄": "=AU22-3"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU22+2,\"mm/dd\")", "顧問2前3天欄": "=AZ22-3"}], "回診次數": 8, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-21-鄒采璇"}, {"區域": "台北", "編號": "22", "方案內容": "1年期", "姓名": "黃蔡愛珍", "生日": "401209", "顧問1": "陳毅勛", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "不發送", "備註": "紅字線上問診", "回診日期": "2026-06-12", "所有回診": [{"序": 1, "回診日期": "2026-03-06", "客服欄": "=TEXT(L23+6,\"mm/dd\")", "顧問2前3天欄": "=Q23-3"}, {"序": 2, "回診日期": "2026-03-20", "客服欄": "=TEXT(Q23+2,\"mm/dd\")", "顧問2前3天欄": "=V23-3"}, {"序": 3, "回診日期": "2026-04-11", "客服欄": "=TEXT(V23+2,\"mm/dd\")", "顧問2前3天欄": "=AA23-3"}, {"序": 4, "回診日期": "2026-05-01", "客服欄": "=TEXT(AA23+2,\"mm/dd\")", "顧問2前3天欄": "=AF23-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF23+2,\"mm/dd\")", "顧問2前3天欄": "=AK23-3"}, {"序": 6, "回診日期": "2026-05-26", "客服欄": "=TEXT(AK23+2,\"mm/dd\")", "顧問2前3天欄": "=AP23-3"}, {"序": 7, "回診日期": "2026-06-12", "客服欄": "=TEXT(AP23+2,\"mm/dd\")", "顧問2前3天欄": "=AU23-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-22-黃蔡愛珍"}, {"區域": "台北", "編號": "23", "方案內容": "3年期", "姓名": "羅柏園", "生日": "471020", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上*(院長建議一週整理血糖紀錄並回報做線上改點)", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L24+6,\"mm/dd\")", "顧問2前3天欄": "=Q24-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q24+2,\"mm/dd\")", "顧問2前3天欄": "=V24-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V24+2,\"mm/dd\")", "顧問2前3天欄": "=AA24-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA24+2,\"mm/dd\")", "顧問2前3天欄": "=AF24-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF24+2,\"mm/dd\")", "顧問2前3天欄": "=AK24-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK24+2,\"mm/dd\")", "顧問2前3天欄": "=AP24-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP24+2,\"mm/dd\")", "顧問2前3天欄": "=AU24-3"}, {"序": 8, "回診日期": "2026-06-02", "客服欄": "=TEXT(AU24+2,\"mm/dd\")", "顧問2前3天欄": "=AZ24-3"}, {"序": 9, "回診日期": "2026-06-16", "客服欄": "=TEXT(AZ24+2,\"mm/dd\")", "顧問2前3天欄": "=BE24-3"}, {"序": 10, "回診日期": "2026-06-30", "客服欄": "=TEXT(BE24+2,\"mm/dd\")", "顧問2前3天欄": "=BJ24-3"}, {"序": 11, "回診日期": "2026-07-14", "客服欄": "=TEXT(BJ24+2,\"mm/dd\")", "顧問2前3天欄": "=BO24-3"}, {"序": 12, "回診日期": "2026-07-28", "客服欄": "=TEXT(BO24+2,\"mm/dd\")", "顧問2前3天欄": "=BT24-3"}], "回診次數": 12, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-23-羅柏園"}, {"區域": "台北", "編號": "24", "方案內容": "2年期", "姓名": "柯吉剛", "生日": "380514", "顧問1": "高羽婕", "顧問2": "蘇貴鈴", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "紅字致電關懷\n線上改點", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L25+6,\"mm/dd\")", "顧問2前3天欄": "=Q25-3"}, {"序": 2, "回診日期": "2026-03-31", "客服欄": "=TEXT(Q25+2,\"mm/dd\")", "顧問2前3天欄": "=V25-3"}, {"序": 3, "回診日期": "2026-04-14", "客服欄": "=TEXT(V25+2,\"mm/dd\")", "顧問2前3天欄": "=AA25-3"}, {"序": 4, "回診日期": "2026-04-28", "客服欄": "=TEXT(AA25+2,\"mm/dd\")", "顧問2前3天欄": "=AF25-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF25+2,\"mm/dd\")", "顧問2前3天欄": "=AK25-3"}, {"序": 6, "回診日期": "2026-05-26", "客服欄": "=TEXT(AK25+2,\"mm/dd\")", "顧問2前3天欄": "=AP25-3"}, {"序": 7, "回診日期": "2026-06-09", "客服欄": "=TEXT(AP25+2,\"mm/dd\")", "顧問2前3天欄": "=AU25-3"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU25+2,\"mm/dd\")", "顧問2前3天欄": "=AZ25-3"}, {"序": 9, "回診日期": "2026-07-10", "客服欄": "=TEXT(AZ25+2,\"mm/dd\")", "顧問2前3天欄": "=BE25-3"}], "回診次數": 9, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-24-柯吉剛"}, {"區域": "台北", "編號": "25", "方案內容": "1年期", "姓名": "鄧文琦", "生日": "600730", "顧問1": "林家君", "顧問2": "許馨予", "客服": "李盈蓁", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L26+6,\"mm/dd\")", "顧問2前3天欄": "=Q26-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q26+2,\"mm/dd\")", "顧問2前3天欄": "=V26-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V26+2,\"mm/dd\")", "顧問2前3天欄": "=AA26-3"}, {"序": 4, "回診日期": "2026-04-14", "客服欄": "=TEXT(AA26+2,\"mm/dd\")", "顧問2前3天欄": "=AF26-3"}, {"序": 5, "回診日期": "2026-04-28", "客服欄": "=TEXT(AF26+2,\"mm/dd\")", "顧問2前3天欄": "=AK26-3"}, {"序": 6, "回診日期": "2026-05-12", "客服欄": "=TEXT(AK26+2,\"mm/dd\")", "顧問2前3天欄": "=AP26-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP26+2,\"mm/dd\")", "顧問2前3天欄": "=AU26-3"}, {"序": 8, "回診日期": "2026-06-09", "客服欄": "=TEXT(AU26+2,\"mm/dd\")", "顧問2前3天欄": "=AZ26-3"}, {"序": 9, "回診日期": "2026-06-23", "客服欄": "=TEXT(AZ26+2,\"mm/dd\")", "顧問2前3天欄": "=BE26-3"}, {"序": 10, "回診日期": "2026-07-07", "客服欄": "=TEXT(BE26+2,\"mm/dd\")", "顧問2前3天欄": "=BJ26-3"}], "回診次數": 10, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-25-鄧文琦"}, {"區域": "台北", "編號": "26", "方案內容": "1年期", "姓名": "邱謝淑慎", "生日": "280120", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "兒子協助回覆使用", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L27+6,\"mm/dd\")", "顧問2前3天欄": "=Q27-3"}, {"序": 2, "回診日期": "2026-03-28", "客服欄": "=TEXT(Q27+2,\"mm/dd\")", "顧問2前3天欄": "=V27-3"}, {"序": 3, "回診日期": "2026-04-25", "客服欄": "=TEXT(V27+2,\"mm/dd\")", "顧問2前3天欄": "=AA27-3"}, {"序": 4, "回診日期": "2026-05-09", "客服欄": "=TEXT(AA27+2,\"mm/dd\")", "顧問2前3天欄": "=AF27-3"}, {"序": 5, "回診日期": "2026-06-06", "客服欄": "=TEXT(AF27+2,\"mm/dd\")", "顧問2前3天欄": "=AK27-3"}, {"序": 6, "回診日期": "2026-06-20", "客服欄": "=TEXT(AK27+2,\"mm/dd\")", "顧問2前3天欄": "=AP27-3"}], "回診次數": 6, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-26-邱謝淑慎"}, {"區域": "台北", "編號": "27", "方案內容": "1年期", "姓名": "樊家駒", "生日": "550602", "顧問1": "林家君", "顧問2": "蔡幸昀", "客服": "李盈蓁", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "發送", "備註": "患者都是照會(住美國)", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-02-24", "客服欄": "=TEXT(L28+6,\"mm/dd\")", "顧問2前3天欄": "=Q28-3"}, {"序": 2, "回診日期": "2026-04-02", "客服欄": "=TEXT(Q28+2,\"mm/dd\")", "顧問2前3天欄": "=V28-3"}, {"序": 3, "回診日期": "2026-04-16", "客服欄": "=TEXT(V28+2,\"mm/dd\")", "顧問2前3天欄": "=AA28-3"}, {"序": 4, "回診日期": "2026-04-30", "客服欄": "=TEXT(AA28+2,\"mm/dd\")", "顧問2前3天欄": "=AF28-3"}, {"序": 5, "回診日期": "2026-05-13", "客服欄": "=TEXT(AF28+2,\"mm/dd\")", "顧問2前3天欄": "=AK28-3"}, {"序": 6, "回診日期": "2026-05-18", "客服欄": "=TEXT(AK28+2,\"mm/dd\")", "顧問2前3天欄": "=AP28-3"}, {"序": 7, "回診日期": "2026-06-01", "客服欄": "=TEXT(AP28+2,\"mm/dd\")", "顧問2前3天欄": "=AU28-3"}, {"序": 8, "回診日期": "2026-06-08", "客服欄": "=TEXT(AU28+2,\"mm/dd\")", "顧問2前3天欄": "=AZ28-3"}, {"序": 9, "回診日期": "2026-06-20", "客服欄": "=TEXT(AZ28+2,\"mm/dd\")", "顧問2前3天欄": "=BE28-3"}, {"序": 10, "回診日期": "2026-07-04", "客服欄": "=TEXT(BE28+2,\"mm/dd\")", "顧問2前3天欄": "=BJ28-3"}], "回診次數": 10, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-27-樊家駒"}, {"區域": "台北", "編號": "28", "方案內容": "1年期", "姓名": "邱子妍\n(母:陳念瑄)", "生日": "1100609", "顧問1": "林家君", "顧問2": "張雅馨", "客服": "李盈蓁", "看診狀態": "4週回診", "類型": "低配合", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L29+6,\"mm/dd\")", "顧問2前3天欄": "=Q29-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q29+2,\"mm/dd\")", "顧問2前3天欄": "=V29-3"}, {"序": 3, "回診日期": "2026-04-14", "客服欄": "=TEXT(V29+2,\"mm/dd\")", "顧問2前3天欄": "=AA29-3"}, {"序": 4, "回診日期": "2026-05-05", "客服欄": "=TEXT(AA29+2,\"mm/dd\")", "顧問2前3天欄": "=AF29-3"}, {"序": 5, "回診日期": "2026-05-29", "客服欄": "=TEXT(AF29+2,\"mm/dd\")", "顧問2前3天欄": "=AK29-3"}, {"序": 6, "回診日期": "2026-06-16", "客服欄": "=TEXT(AK29+2,\"mm/dd\")", "顧問2前3天欄": "=AP29-3"}, {"序": 7, "回診日期": "2026-06-30", "客服欄": "=TEXT(AP29+2,\"mm/dd\")", "顧問2前3天欄": "=AU29-3"}, {"序": 8, "回診日期": "2026-07-14", "客服欄": "=TEXT(AU29+2,\"mm/dd\")", "顧問2前3天欄": "=AZ29-3"}], "回診次數": 8, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-28-邱子妍\n(母:陳念瑄)"}, {"區域": "台北", "編號": "29", "方案內容": "1年期", "姓名": "莊自立", "生日": "611216", "顧問1": "陳毅勛", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "不發送", "備註": "秘書會自行主動預約。", "回診日期": "2026-03-03", "所有回診": [{"序": 1, "回診日期": "2026-03-03", "客服欄": "=TEXT(L30+6,\"mm/dd\")", "顧問2前3天欄": "=Q30-3"}], "回診次數": 1, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-29-莊自立"}, {"區域": "台北", "編號": "30", "方案內容": "1年期", "姓名": "陳秀卿", "生日": "431001", "顧問1": "陳欣怡", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "不發送", "備註": "", "回診日期": "2026-07-02", "所有回診": [{"序": 1, "回診日期": "2026-03-12", "客服欄": "=TEXT(L31+6,\"mm/dd\")", "顧問2前3天欄": "=Q31-3"}, {"序": 2, "回診日期": "2026-03-26", "客服欄": "=TEXT(Q31+2,\"mm/dd\")", "顧問2前3天欄": "=V31-3"}, {"序": 3, "回診日期": "2026-04-09", "客服欄": "=TEXT(V31+2,\"mm/dd\")", "顧問2前3天欄": "=AA31-3"}, {"序": 4, "回診日期": "2026-04-23", "客服欄": "=TEXT(AA31+2,\"mm/dd\")", "顧問2前3天欄": "=AF31-3"}, {"序": 5, "回診日期": "2026-05-07", "客服欄": "=TEXT(AF31+2,\"mm/dd\")", "顧問2前3天欄": "=AK31-3"}, {"序": 6, "回診日期": "2026-05-25", "客服欄": "=TEXT(AK31+2,\"mm/dd\")", "顧問2前3天欄": "=AP31-3"}, {"序": 7, "回診日期": "2026-06-15", "客服欄": "=TEXT(AP31+2,\"mm/dd\")", "顧問2前3天欄": "=AU31-3"}, {"序": 8, "回診日期": "2026-07-02", "客服欄": "=TEXT(AU31+2,\"mm/dd\")", "顧問2前3天欄": "=AZ31-3"}], "回診次數": 8, "下一次回診日期": "2026-07-02", "距離天數": 13, "回診前3天": false, "資料異常": [], "__id": "台北-30-陳秀卿"}, {"區域": "台北", "編號": "31", "方案內容": "1年期", "姓名": "陳宥嘉", "生日": "640813", "顧問1": "林羿君", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L32+6,\"mm/dd\")", "顧問2前3天欄": "=Q32-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q32+2,\"mm/dd\")", "顧問2前3天欄": "=V32-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V32+2,\"mm/dd\")", "顧問2前3天欄": "=AA32-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA32+2,\"mm/dd\")", "顧問2前3天欄": "=AF32-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF32+2,\"mm/dd\")", "顧問2前3天欄": "=AK32-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK32+2,\"mm/dd\")", "顧問2前3天欄": "=AP32-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP32+2,\"mm/dd\")", "顧問2前3天欄": "=AU32-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU32+2,\"mm/dd\")", "顧問2前3天欄": "=AZ32-3"}, {"序": 9, "回診日期": "2026-06-30", "客服欄": "=TEXT(AZ32+2,\"mm/dd\")", "顧問2前3天欄": "=BE32-3"}, {"序": 10, "回診日期": "2026-07-14", "客服欄": "=TEXT(BE32+2,\"mm/dd\")", "顧問2前3天欄": "=BJ32-3"}, {"序": 11, "回診日期": "2026-07-28", "客服欄": "=TEXT(BJ32+2,\"mm/dd\")", "顧問2前3天欄": "=BO32-3"}], "回診次數": 11, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-31-陳宥嘉"}, {"區域": "台北", "編號": "32", "方案內容": "1年期", "姓名": "許嘉芳", "生日": "570422", "顧問1": "陳欣怡", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-03-02", "客服欄": "=TEXT(L33+6,\"mm/dd\")", "顧問2前3天欄": "=Q33-3"}, {"序": 2, "回診日期": "2026-04-02", "客服欄": "=TEXT(Q33+2,\"mm/dd\")", "顧問2前3天欄": "=V33-3"}, {"序": 3, "回診日期": "2026-04-16", "客服欄": "=TEXT(V33+2,\"mm/dd\")", "顧問2前3天欄": "=AA33-3"}, {"序": 4, "回診日期": "2026-05-11", "客服欄": "=TEXT(AA33+2,\"mm/dd\")", "顧問2前3天欄": "=AF33-3"}, {"序": 5, "回診日期": "2026-05-25", "客服欄": "=TEXT(AF33+2,\"mm/dd\")", "顧問2前3天欄": "=AK33-3"}, {"序": 6, "回診日期": "2026-06-08", "客服欄": "=TEXT(AK33+2,\"mm/dd\")", "顧問2前3天欄": "=AP33-3"}, {"序": 7, "回診日期": "2026-06-25", "客服欄": "=TEXT(AP33+2,\"mm/dd\")", "顧問2前3天欄": "=AU33-3"}, {"序": 8, "回診日期": "2026-07-09", "客服欄": "=TEXT(AU33+2,\"mm/dd\")", "顧問2前3天欄": "=AZ33-3"}], "回診次數": 8, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-32-許嘉芳"}, {"區域": "台北", "編號": "33", "方案內容": "1年期", "姓名": "胡淑君", "生日": "610828", "顧問1": "林羿君", "顧問2": "李濟柔", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診(致電儘量安排在17:00左右)", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-03-05", "客服欄": "=TEXT(L34+6,\"mm/dd\")", "顧問2前3天欄": "=Q34-3"}, {"序": 2, "回診日期": "2026-03-19", "客服欄": "=TEXT(Q34+2,\"mm/dd\")", "顧問2前3天欄": "=V34-3"}, {"序": 3, "回診日期": "2026-04-02", "客服欄": "=TEXT(V34+2,\"mm/dd\")", "顧問2前3天欄": "=AA34-3"}, {"序": 4, "回診日期": "2026-04-16", "客服欄": "=TEXT(AA34+2,\"mm/dd\")", "顧問2前3天欄": "=AF34-3"}, {"序": 5, "回診日期": "2026-04-30", "客服欄": "=TEXT(AF34+2,\"mm/dd\")", "顧問2前3天欄": "=AK34-3"}, {"序": 6, "回診日期": "2026-05-14", "客服欄": "=TEXT(AK34+2,\"mm/dd\")", "顧問2前3天欄": "=AP34-3"}, {"序": 7, "回診日期": "2026-05-28", "客服欄": "=TEXT(AP34+2,\"mm/dd\")", "顧問2前3天欄": "=AU34-3"}, {"序": 8, "回診日期": "2026-06-11", "客服欄": "=TEXT(AU34+2,\"mm/dd\")", "顧問2前3天欄": "=AZ34-3"}, {"序": 9, "回診日期": "2026-06-25", "客服欄": "=TEXT(AZ34+2,\"mm/dd\")", "顧問2前3天欄": "=BE34-3"}, {"序": 10, "回診日期": "2026-07-09", "客服欄": "=TEXT(BE34+2,\"mm/dd\")", "顧問2前3天欄": "=BJ34-3"}], "回診次數": 10, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-33-胡淑君"}, {"區域": "台北", "編號": "34", "方案內容": "1年期", "姓名": "林黃美雲", "生日": "400601", "顧問1": "陳毅勛", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L35+2,\"mm/dd\")", "顧問2前3天欄": "=Q35-3"}], "回診次數": 1, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "台北-34-林黃美雲"}, {"區域": "台北", "編號": "35", "方案內容": "1年期", "姓名": "郭玉霞", "生日": "430217", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L36+6,\"mm/dd\")", "顧問2前3天欄": "=Q36-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q36+2,\"mm/dd\")", "顧問2前3天欄": "=V36-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V36+2,\"mm/dd\")", "顧問2前3天欄": "=AA36-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA36+2,\"mm/dd\")", "顧問2前3天欄": "=AF36-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF36+2,\"mm/dd\")", "顧問2前3天欄": "=AK36-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK36+2,\"mm/dd\")", "顧問2前3天欄": "=AP36-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP36+2,\"mm/dd\")", "顧問2前3天欄": "=AU36-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU36+2,\"mm/dd\")", "顧問2前3天欄": "=AZ36-3"}, {"序": 9, "回診日期": "2026-06-30", "客服欄": "=TEXT(AZ36+2,\"mm/dd\")", "顧問2前3天欄": "=BE36-3"}], "回診次數": 9, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-35-郭玉霞"}, {"區域": "台北", "編號": "36", "方案內容": "2年期", "姓名": "陳淑華", "生日": "440128", "顧問1": "林羿君", "顧問2": "蘇貴鈴", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-18", "所有回診": [{"序": 1, "回診日期": "2026-02-12", "客服欄": "=TEXT(L37+6,\"mm/dd\")", "顧問2前3天欄": "=Q37-3"}, {"序": 2, "回診日期": "2026-03-19", "客服欄": "=TEXT(Q37+2,\"mm/dd\")", "顧問2前3天欄": "=V37-3"}, {"序": 3, "回診日期": "2026-04-06", "客服欄": "=TEXT(V37+2,\"mm/dd\")", "顧問2前3天欄": "=AA37-3"}, {"序": 4, "回診日期": "2026-04-23", "客服欄": "=TEXT(AA37+2,\"mm/dd\")", "顧問2前3天欄": "=AF37-3"}, {"序": 5, "回診日期": "2026-05-11", "客服欄": "=TEXT(AF37+2,\"mm/dd\")", "顧問2前3天欄": "=AK37-3"}, {"序": 6, "回診日期": "2026-06-01", "客服欄": "=TEXT(AK37+2,\"mm/dd\")", "顧問2前3天欄": "=AP37-3"}, {"序": 7, "回診日期": "2026-06-18", "客服欄": "=TEXT(AP37+2,\"mm/dd\")", "顧問2前3天欄": "=AU37-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-36-陳淑華"}, {"區域": "台北", "編號": "37", "方案內容": "3年期", "姓名": "謝錦枝", "生日": "520415", "顧問1": "陳毅勛", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-17", "客服欄": "=TEXT(L38+6,\"mm/dd\")", "顧問2前3天欄": "=Q38-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q38+2,\"mm/dd\")", "顧問2前3天欄": "=V38-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V38+2,\"mm/dd\")", "顧問2前3天欄": "=AA38-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA38+2,\"mm/dd\")", "顧問2前3天欄": "=AF38-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF38+2,\"mm/dd\")", "顧問2前3天欄": "=AK38-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK38+2,\"mm/dd\")", "顧問2前3天欄": "=AP38-3"}, {"序": 7, "回診日期": "2026-06-09", "客服欄": "=TEXT(AP38+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-20"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU38+2,\"mm/dd\")", "顧問2前3天欄": "=AZ38-3"}], "回診次數": 8, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-37-謝錦枝"}, {"區域": "台北", "編號": "38", "方案內容": "1年期", "姓名": "吳麗雲", "生日": "461023", "顧問1": "陳欣怡", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-18", "所有回診": [{"序": 1, "回診日期": "2026-03-12", "客服欄": "=TEXT(L39+6,\"mm/dd\")", "顧問2前3天欄": "=Q39-3"}, {"序": 2, "回診日期": "2026-03-26", "客服欄": "=TEXT(Q39+2,\"mm/dd\")", "顧問2前3天欄": "=V39-3"}, {"序": 3, "回診日期": "2026-04-09", "客服欄": "=TEXT(V39+2,\"mm/dd\")", "顧問2前3天欄": "=AA39-3"}, {"序": 4, "回診日期": "2026-04-23", "客服欄": "=TEXT(AA39+2,\"mm/dd\")", "顧問2前3天欄": "=AF39-3"}, {"序": 5, "回診日期": "2026-05-07", "客服欄": "=TEXT(AF39+2,\"mm/dd\")", "顧問2前3天欄": "=AK39-3"}, {"序": 6, "回診日期": "2026-05-21", "客服欄": "=TEXT(AK39+2,\"mm/dd\")", "顧問2前3天欄": "=AP39-3"}, {"序": 7, "回診日期": "2026-06-04", "客服欄": "=TEXT(AP39+2,\"mm/dd\")", "顧問2前3天欄": "=AU39-3"}, {"序": 8, "回診日期": "2026-06-18", "客服欄": "=TEXT(AU39+2,\"mm/dd\")", "顧問2前3天欄": "=AZ39-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-38-吳麗雲"}, {"區域": "台北", "編號": "39", "方案內容": "1年期", "姓名": "鄒聿愷", "生日": "1020117", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診(院長建議一週關心一次)", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L40+6,\"mm/dd\")", "顧問2前3天欄": "=Q40-3"}, {"序": 2, "回診日期": "2026-03-28", "客服欄": "=TEXT(Q40+2,\"mm/dd\")", "顧問2前3天欄": "=V40-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V40+2,\"mm/dd\")", "顧問2前3天欄": "=AA40-3"}, {"序": 4, "回診日期": "2026-04-14", "客服欄": "=TEXT(AA40+2,\"mm/dd\")", "顧問2前3天欄": "=AF40-3"}, {"序": 5, "回診日期": "2026-04-21", "客服欄": "=TEXT(AF40+2,\"mm/dd\")", "顧問2前3天欄": "=AK40-3"}, {"序": 6, "回診日期": "2026-04-28", "客服欄": "=TEXT(AK40+2,\"mm/dd\")", "顧問2前3天欄": "=AP40-3"}, {"序": 7, "回診日期": "2026-05-12", "客服欄": "=TEXT(AP40+2,\"mm/dd\")", "顧問2前3天欄": "2026-05-23"}, {"序": 8, "回診日期": "2026-05-26", "客服欄": "=TEXT(AU40+2,\"mm/dd\")", "顧問2前3天欄": "=AZ40-3"}, {"序": 9, "回診日期": "2026-06-09", "客服欄": "=TEXT(AZ40+2,\"mm/dd\")", "顧問2前3天欄": "=BE40-3"}, {"序": 10, "回診日期": "2026-06-23", "客服欄": "=TEXT(BE40+2,\"mm/dd\")", "顧問2前3天欄": "=BJ40-3"}], "回診次數": 10, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-39-鄒聿愷"}, {"區域": "台北", "編號": "40", "方案內容": "1年期", "姓名": "熊恩筠", "生日": "801123", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L41+6,\"mm/dd\")", "顧問2前3天欄": "=Q41-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q41+2,\"mm/dd\")", "顧問2前3天欄": "=V41-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V41+2,\"mm/dd\")", "顧問2前3天欄": "=AA41-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA41+2,\"mm/dd\")", "顧問2前3天欄": "=AF41-3"}, {"序": 5, "回診日期": "2026-05-12", "客服欄": "=TEXT(AF41+2,\"mm/dd\")", "顧問2前3天欄": "=AK41-3"}, {"序": 6, "回診日期": "2026-05-26", "客服欄": "=TEXT(AK41+2,\"mm/dd\")", "顧問2前3天欄": "=AP41-3"}, {"序": 7, "回診日期": "2026-06-09", "客服欄": "=TEXT(AP41+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-20"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU41+2,\"mm/dd\")", "顧問2前3天欄": "=AZ41-3"}, {"序": 9, "回診日期": "2026-07-07", "客服欄": "=TEXT(AZ41+2,\"mm/dd\")", "顧問2前3天欄": "=BE41-3"}], "回診次數": 9, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-40-熊恩筠"}, {"區域": "台北", "編號": "41", "方案內容": "1年期", "姓名": "劉瓔慧", "生日": "611009", "顧問1": "林羿君", "顧問2": "李濟柔", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診\n患者表示不便接聽電話\n用LINE關懷即可", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-02-24", "客服欄": "=TEXT(L42+6,\"mm/dd\")", "顧問2前3天欄": "=Q42-3"}, {"序": 2, "回診日期": "2026-03-28", "客服欄": "=TEXT(Q42+2,\"mm/dd\")", "顧問2前3天欄": "=V42-3"}, {"序": 3, "回診日期": "2026-04-11", "客服欄": "=TEXT(V42+2,\"mm/dd\")", "顧問2前3天欄": "=AA42-3"}, {"序": 4, "回診日期": "2026-04-25", "客服欄": "=TEXT(AA42+2,\"mm/dd\")", "顧問2前3天欄": "=AF42-3"}, {"序": 5, "回診日期": "2026-05-09", "客服欄": "=TEXT(AF42+2,\"mm/dd\")", "顧問2前3天欄": "=AK42-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK42+2,\"mm/dd\")", "顧問2前3天欄": "=AP42-3"}, {"序": 7, "回診日期": "2026-06-06", "客服欄": "=TEXT(AP42+2,\"mm/dd\")", "顧問2前3天欄": "=AU42-3"}, {"序": 8, "回診日期": "2026-06-20", "客服欄": "=TEXT(AU42+2,\"mm/dd\")", "顧問2前3天欄": "=AZ42-3"}, {"序": 9, "回診日期": "2026-07-04", "客服欄": "=TEXT(AZ42+2,\"mm/dd\")", "顧問2前3天欄": "=BE42-3"}], "回診次數": 9, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-41-劉瓔慧"}, {"區域": "台北", "編號": "42", "方案內容": "1年期", "姓名": "阮宥琪", "生日": "590322", "顧問1": "林羿君", "顧問2": "李濟柔", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L43+2,\"mm/dd\")", "顧問2前3天欄": "=Q43-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q43+2,\"mm/dd\")", "顧問2前3天欄": "=V43-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V43+2,\"mm/dd\")", "顧問2前3天欄": "=AA43-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA43+2,\"mm/dd\")", "顧問2前3天欄": "=AF43-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF43+2,\"mm/dd\")", "顧問2前3天欄": "=AK43-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK43+2,\"mm/dd\")", "顧問2前3天欄": "=AP43-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP43+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-13"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU43+2,\"mm/dd\")", "顧問2前3天欄": "=AZ43-3"}, {"序": 9, "回診日期": "2026-06-23", "客服欄": "=TEXT(AZ43+2,\"mm/dd\")", "顧問2前3天欄": "=BE43-3"}, {"序": 10, "回診日期": "2026-06-30", "客服欄": "=TEXT(BE43+2,\"mm/dd\")", "顧問2前3天欄": "=BJ43-3"}, {"序": 11, "回診日期": "2026-07-07", "客服欄": "=TEXT(BJ43+2,\"mm/dd\")", "顧問2前3天欄": "=BO43-3"}, {"序": 12, "回診日期": "2026-07-14", "客服欄": "=TEXT(BO43+2,\"mm/dd\")", "顧問2前3天欄": "=BT43-3"}], "回診次數": 12, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-42-阮宥琪"}, {"區域": "台北", "編號": "43", "方案內容": "1年期", "姓名": "呂春燕", "生日": "邱子妍", "顧問1": "陳毅勛", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-02-28", "客服欄": "=TEXT(L44+6,\"mm/dd\")", "顧問2前3天欄": "=Q44-3"}, {"序": 2, "回診日期": "2026-03-17", "客服欄": "=TEXT(Q44+2,\"mm/dd\")", "顧問2前3天欄": "=V44-3"}, {"序": 3, "回診日期": "2026-03-31", "客服欄": "=TEXT(V44+2,\"mm/dd\")", "顧問2前3天欄": "=AA44-3"}, {"序": 4, "回診日期": "2026-04-14", "客服欄": "=TEXT(AA44+2,\"mm/dd\")", "顧問2前3天欄": "=AF44-3"}, {"序": 5, "回診日期": "2026-04-28", "客服欄": "=TEXT(AF44+2,\"mm/dd\")", "顧問2前3天欄": "=AK44-3"}, {"序": 6, "回診日期": "2026-05-12", "客服欄": "=TEXT(AK44+2,\"mm/dd\")", "顧問2前3天欄": "=AP44-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP44+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-09"}, {"序": 8, "回診日期": "2026-06-12", "客服欄": "=TEXT(AU44+2,\"mm/dd\")", "顧問2前3天欄": "=AZ44-3"}, {"序": 9, "回診日期": "2026-06-30", "客服欄": "=TEXT(AZ44+2,\"mm/dd\")", "顧問2前3天欄": "=BE44-3"}], "回診次數": 9, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-43-呂春燕"}, {"區域": "台北", "編號": "44", "方案內容": "1年期", "姓名": "李品呈", "生日": "1070802", "顧問1": "高羽婕", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L45+6,\"mm/dd\")", "顧問2前3天欄": "=Q45-3"}, {"序": 2, "回診日期": "2026-03-28", "客服欄": "=TEXT(Q45+2,\"mm/dd\")", "顧問2前3天欄": "=V45-3"}, {"序": 3, "回診日期": "2026-04-21", "客服欄": "=TEXT(V45+2,\"mm/dd\")", "顧問2前3天欄": "=AA45-3"}, {"序": 4, "回診日期": "2026-06-23", "客服欄": "=TEXT(AA45+2,\"mm/dd\")", "顧問2前3天欄": "=AF45-3"}], "回診次數": 4, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-44-李品呈"}, {"區域": "台北", "編號": "45", "方案內容": "3年期", "姓名": "王敏儒", "生日": "581006", "顧問1": "陳毅勛", "顧問2": "趙巧瑋", "客服": "袁羽宣", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "未交付", "回診日期": "", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L46+2,\"mm/dd\")", "顧問2前3天欄": "=Q46-3"}], "回診次數": 1, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "台北-45-王敏儒"}, {"區域": "台北", "編號": "46", "方案內容": "3年期", "姓名": "陳金前", "生日": "系統無", "顧問1": "陳毅勛", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "未交付", "回診日期": "", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L47+2,\"mm/dd\")", "顧問2前3天欄": "=Q47-3"}], "回診次數": 1, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "台北-46-陳金前"}, {"區域": "台北", "編號": "47", "方案內容": "1年期", "姓名": "黃家嬅", "生日": "731017", "顧問1": "林羿君", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "紅字線上問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-04-15", "客服欄": "=TEXT(L48+6,\"mm/dd\")", "顧問2前3天欄": "=Q48-3"}, {"序": 2, "回診日期": "2026-04-28", "客服欄": "=TEXT(Q48+2,\"mm/dd\")", "顧問2前3天欄": "=V48-3"}, {"序": 3, "回診日期": "2026-05-12", "客服欄": "=TEXT(V48+2,\"mm/dd\")", "顧問2前3天欄": "=AA48-3"}, {"序": 4, "回診日期": "2026-05-26", "客服欄": "=TEXT(AA48+2,\"mm/dd\")", "顧問2前3天欄": "=AF48-3"}, {"序": 5, "回診日期": "2026-06-09", "客服欄": "=TEXT(AF48+2,\"mm/dd\")", "顧問2前3天欄": "=AK48-3"}, {"序": 6, "回診日期": "2026-06-23", "客服欄": "=TEXT(AK48+2,\"mm/dd\")", "顧問2前3天欄": "=AP48-3"}], "回診次數": 6, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-47-黃家嬅"}, {"區域": "台北", "編號": "48", "方案內容": "1年期", "姓名": "江芳男", "生日": "310128", "顧問1": "陳欣怡", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "2026-03-13", "客服欄": "=TEXT(L49+6,\"mm/dd\")", "顧問2前3天欄": "=Q49-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q49+2,\"mm/dd\")", "顧問2前3天欄": "=V49-3"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(V49+2,\"mm/dd\")", "顧問2前3天欄": "=AA49-3"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AA49+2,\"mm/dd\")", "顧問2前3天欄": "=AF49-3"}, {"序": 5, "回診日期": "2026-05-08", "客服欄": "=TEXT(AF49+2,\"mm/dd\")", "顧問2前3天欄": "=AK49-3"}, {"序": 6, "回診日期": "2026-05-22", "客服欄": "=TEXT(AK49+2,\"mm/dd\")", "顧問2前3天欄": "=AP49-3"}, {"序": 7, "回診日期": "2026-06-05", "客服欄": "=TEXT(AP49+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-19"}, {"序": 8, "回診日期": "2026-06-22", "客服欄": "=TEXT(AU49+2,\"mm/dd\")", "顧問2前3天欄": "=AZ49-3"}, {"序": 9, "回診日期": "2026-07-03", "客服欄": "=TEXT(AZ49+2,\"mm/dd\")", "顧問2前3天欄": "=BE49-3"}], "回診次數": 9, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-48-江芳男"}, {"區域": "台北", "編號": "49", "方案內容": "1年期", "姓名": "姚佳佑", "生日": "800701", "顧問1": "陳欣怡", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L50+2,\"mm/dd\")", "顧問2前3天欄": "=Q50-3"}, {"序": 2, "回診日期": "2026-04-09", "客服欄": "=TEXT(Q50+2,\"mm/dd\")", "顧問2前3天欄": "=V50-3"}, {"序": 3, "回診日期": "2026-04-27", "客服欄": "=TEXT(V50+2,\"mm/dd\")", "顧問2前3天欄": "=AA50-3"}, {"序": 4, "回診日期": "2026-05-11", "客服欄": "=TEXT(AA50+2,\"mm/dd\")", "顧問2前3天欄": "=AF50-3"}, {"序": 5, "回診日期": "2026-05-25", "客服欄": "=TEXT(AF50+2,\"mm/dd\")", "顧問2前3天欄": "=AK50-3"}, {"序": 6, "回診日期": "2026-06-08", "客服欄": "=TEXT(AK50+2,\"mm/dd\")", "顧問2前3天欄": "=AP50-3"}, {"序": 7, "回診日期": "2026-06-22", "客服欄": "=TEXT(AP50+2,\"mm/dd\")", "顧問2前3天欄": "#######"}], "回診次數": 7, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-49-姚佳佑"}, {"區域": "台北", "編號": "50", "方案內容": "1年期", "姓名": "蔡幼華", "生日": "491205", "顧問1": "陳欣怡", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-18", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L51+2,\"mm/dd\")", "顧問2前3天欄": "=Q51-3"}, {"序": 2, "回診日期": "2026-04-02", "客服欄": "=TEXT(Q51+2,\"mm/dd\")", "顧問2前3天欄": "=V51-3"}, {"序": 3, "回診日期": "2026-04-16", "客服欄": "=TEXT(V51+2,\"mm/dd\")", "顧問2前3天欄": "=AA51-3"}, {"序": 4, "回診日期": "2026-04-30", "客服欄": "=TEXT(AA51+2,\"mm/dd\")", "顧問2前3天欄": "=AF51-3"}, {"序": 5, "回診日期": "2026-05-14", "客服欄": "=TEXT(AF51+2,\"mm/dd\")", "顧問2前3天欄": "=AK51-3"}, {"序": 6, "回診日期": "2026-06-01", "客服欄": "=TEXT(AK51+2,\"mm/dd\")", "顧問2前3天欄": "=AP51-3"}, {"序": 7, "回診日期": "2026-06-18", "客服欄": "=TEXT(AP51+2,\"mm/dd\")", "顧問2前3天欄": "=AU51-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-50-蔡幼華"}, {"區域": "台北", "編號": "51", "方案內容": "1年期", "姓名": "郭春金", "生日": "371110", "顧問1": "林家君", "顧問2": "蘇貴鈴", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "", "回診日期": "2026-07-02", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L52+2,\"mm/dd\")", "顧問2前3天欄": "=Q52-3"}, {"序": 2, "回診日期": "2026-04-16", "客服欄": "=TEXT(Q52+2,\"mm/dd\")", "顧問2前3天欄": "=V52-3"}, {"序": 3, "回診日期": "2026-04-30", "客服欄": "=TEXT(V52+2,\"mm/dd\")", "顧問2前3天欄": "=AA52-3"}, {"序": 4, "回診日期": "2026-05-14", "客服欄": "=TEXT(AA52+2,\"mm/dd\")", "顧問2前3天欄": "=AF52-3"}, {"序": 5, "回診日期": "2026-06-04", "客服欄": "=TEXT(AF52+2,\"mm/dd\")", "顧問2前3天欄": "=AK52-3"}, {"序": 6, "回診日期": "2026-06-18", "客服欄": "=TEXT(AK52+2,\"mm/dd\")", "顧問2前3天欄": "=AP52-3"}, {"序": 7, "回診日期": "2026-07-02", "客服欄": "=TEXT(AP52+2,\"mm/dd\")", "顧問2前3天欄": "=AU52-3"}], "回診次數": 7, "下一次回診日期": "2026-07-02", "距離天數": 13, "回診前3天": false, "資料異常": [], "__id": "台北-51-郭春金"}, {"區域": "台北", "編號": "52", "方案內容": "1年期", "姓名": "蔡碧月", "生日": "590502", "顧問1": "陳儀琳", "顧問2": "張雅馨", "客服": "李盈蓁", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "未交付", "回診日期": "", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L53+2,\"mm/dd\")", "顧問2前3天欄": "=Q53-3"}], "回診次數": 1, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "台北-52-蔡碧月"}, {"區域": "台北", "編號": "53", "方案內容": "1年期", "姓名": "黃識頻", "生日": "580625", "顧問1": "林羿君", "顧問2": "張雅馨", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L54+2,\"mm/dd\")", "顧問2前3天欄": "=Q54-3"}, {"序": 2, "回診日期": "2026-04-07", "客服欄": "=TEXT(Q54+2,\"mm/dd\")", "顧問2前3天欄": "=V54-3"}, {"序": 3, "回診日期": "2026-04-21", "客服欄": "=TEXT(V54+2,\"mm/dd\")", "顧問2前3天欄": "=AA54-3"}, {"序": 4, "回診日期": "2026-05-05", "客服欄": "=TEXT(AA54+2,\"mm/dd\")", "顧問2前3天欄": "=AF54-3"}, {"序": 5, "回診日期": "2026-05-19", "客服欄": "=TEXT(AF54+2,\"mm/dd\")", "顧問2前3天欄": "=AK54-3"}, {"序": 6, "回診日期": "2026-06-02", "客服欄": "=TEXT(AK54+2,\"mm/dd\")", "顧問2前3天欄": "=AP54-3"}, {"序": 7, "回診日期": "2026-06-16", "客服欄": "=TEXT(AP54+2,\"mm/dd\")", "顧問2前3天欄": "=AU54-3"}, {"序": 8, "回診日期": "2026-06-30", "客服欄": "=TEXT(AU54+2,\"mm/dd\")", "顧問2前3天欄": "=AZ54-3"}], "回診次數": 8, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-53-黃識頻"}, {"區域": "台北", "編號": "54", "方案內容": "1年期", "姓名": "塗淑鳳", "生日": "420703", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "眼睛不舒服，怕操作手機，請直接電話關心。(6/27_13:30致電)", "回診日期": "2026-06-27", "所有回診": [{"序": 1, "回診日期": "2026-03-23", "客服欄": "=TEXT(L55+6,\"mm/dd\")", "顧問2前3天欄": "=Q55-3"}, {"序": 2, "回診日期": "2026-04-06", "客服欄": "=TEXT(Q55+2,\"mm/dd\")", "顧問2前3天欄": "=V55-3"}, {"序": 3, "回診日期": "2026-04-25", "客服欄": "=TEXT(V55+2,\"mm/dd\")", "顧問2前3天欄": "=AA55-3"}, {"序": 4, "回診日期": "2026-05-09", "客服欄": "=TEXT(AA55+2,\"mm/dd\")", "顧問2前3天欄": "=AF55-3"}, {"序": 5, "回診日期": "2026-05-23", "客服欄": "=TEXT(AF55+2,\"mm/dd\")", "顧問2前3天欄": "=AK55-3"}, {"序": 6, "回診日期": "2026-06-12", "客服欄": "=TEXT(AK55+2,\"mm/dd\")", "顧問2前3天欄": "=AP55-3"}, {"序": 7, "回診日期": "2026-06-27", "客服欄": "=TEXT(AP55+2,\"mm/dd\")", "顧問2前3天欄": "=AU55-3"}, {"序": 8, "回診日期": "2026-07-07", "客服欄": "=TEXT(AU55+2,\"mm/dd\")", "顧問2前3天欄": "=AZ55-3"}], "回診次數": 8, "下一次回診日期": "2026-06-27", "距離天數": 8, "回診前3天": false, "資料異常": [], "__id": "台北-54-塗淑鳳"}, {"區域": "台北", "編號": "55", "方案內容": "1年期", "姓名": "張仲萱", "生日": "590206", "顧問1": "高羽婕", "顧問2": "蘇貴鈴", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-27", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L56+6,\"mm/dd\")", "顧問2前3天欄": "=Q56-3"}, {"序": 2, "回診日期": "2026-04-04", "客服欄": "=TEXT(Q56+2,\"mm/dd\")", "顧問2前3天欄": "=V56-3"}, {"序": 3, "回診日期": "2026-04-18", "客服欄": "=TEXT(V56+2,\"mm/dd\")", "顧問2前3天欄": "=AA56-3"}, {"序": 4, "回診日期": "2026-04-25", "客服欄": "=TEXT(AA56+2,\"mm/dd\")", "顧問2前3天欄": "=AF56-3"}, {"序": 5, "回診日期": "2026-05-16", "客服欄": "=TEXT(AF56+2,\"mm/dd\")", "顧問2前3天欄": "=AK56-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK56+2,\"mm/dd\")", "顧問2前3天欄": "=AP56-3"}, {"序": 7, "回診日期": "2026-06-13", "客服欄": "=TEXT(AP56+2,\"mm/dd\")", "顧問2前3天欄": "=AU56-3"}, {"序": 8, "回診日期": "2026-06-27", "客服欄": "=TEXT(AU56+2,\"mm/dd\")", "顧問2前3天欄": "=AZ56-3"}], "回診次數": 8, "下一次回診日期": "2026-06-27", "距離天數": 8, "回診前3天": false, "資料異常": [], "__id": "台北-55-張仲萱"}, {"區域": "台北", "編號": "56", "方案內容": "1年期", "姓名": "李淑敏", "生日": "470620", "顧問1": "陳毅勛", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "紅字線上*關心*(院長建議一週關心一次線上改點)\n年紀大，不太會操作手機", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L57+6,\"mm/dd\")", "顧問2前3天欄": "=Q57-3"}, {"序": 2, "回診日期": "2026-04-03", "客服欄": "=TEXT(Q57+2,\"mm/dd\")", "顧問2前3天欄": "=V57-3"}, {"序": 3, "回診日期": "2026-04-17", "客服欄": "=TEXT(V57+2,\"mm/dd\")", "顧問2前3天欄": "=AA57-3"}, {"序": 4, "回診日期": "2026-05-01", "客服欄": "=TEXT(AA57+2,\"mm/dd\")", "顧問2前3天欄": "=AF57-3"}, {"序": 5, "回診日期": "2026-05-06", "客服欄": "=TEXT(AF57+2,\"mm/dd\")", "顧問2前3天欄": "5/7照會(O)\n5/11會再去電關懷\n已改約5/19回診"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK57+2,\"mm/dd\")", "顧問2前3天欄": "=AP57-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP57+2,\"mm/dd\")", "顧問2前3天欄": "=AU57-3"}, {"序": 8, "回診日期": "2026-06-02", "客服欄": "=TEXT(AU57+2,\"mm/dd\")", "顧問2前3天欄": "=AZ57-3"}, {"序": 9, "回診日期": "2026-06-09", "客服欄": "=TEXT(AZ57+2,\"mm/dd\")", "顧問2前3天欄": "=BE57-3"}, {"序": 10, "回診日期": "2026-06-16", "客服欄": "=TEXT(BE57+2,\"mm/dd\")", "顧問2前3天欄": "=BJ57-3"}, {"序": 11, "回診日期": "2026-06-23", "客服欄": "=TEXT(BJ57+2,\"mm/dd\")", "顧問2前3天欄": "=BO57-3"}, {"序": 12, "回診日期": "2026-07-10", "客服欄": "=TEXT(BO57+2,\"mm/dd\")", "顧問2前3天欄": "=BT57-3"}], "回診次數": 12, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-56-李淑敏"}, {"區域": "台北", "編號": "57", "方案內容": "1年期", "姓名": "葉大振", "生日": "420215", "顧問1": "陳毅勛", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "紅字線上*關心*(院長建議一週關心一次.線上改點)\n年紀大，不太會操作手機", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L58+6,\"mm/dd\")", "顧問2前3天欄": "=Q58-3"}, {"序": 2, "回診日期": "2026-04-03", "客服欄": "=TEXT(Q58+2,\"mm/dd\")", "顧問2前3天欄": "=V58-3"}, {"序": 3, "回診日期": "2026-04-17", "客服欄": "=TEXT(V58+2,\"mm/dd\")", "顧問2前3天欄": "=AA58-3"}, {"序": 4, "回診日期": "2026-05-01", "客服欄": "=TEXT(AA58+2,\"mm/dd\")", "顧問2前3天欄": "=AF58-3"}, {"序": 5, "回診日期": "2026-05-06", "客服欄": "=TEXT(AF58+2,\"mm/dd\")", "顧問2前3天欄": "5/7照會(O)\n5/11會再去電關懷\n已改約5/19回診"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK58+2,\"mm/dd\")", "顧問2前3天欄": "=AP58-3"}, {"序": 7, "回診日期": "2026-05-26", "客服欄": "=TEXT(AP58+2,\"mm/dd\")", "顧問2前3天欄": "=AU58-3"}, {"序": 8, "回診日期": "2026-06-02", "客服欄": "=TEXT(AU58+2,\"mm/dd\")", "顧問2前3天欄": "=AZ58-3"}, {"序": 9, "回診日期": "2026-06-09", "客服欄": "=TEXT(AZ58+2,\"mm/dd\")", "顧問2前3天欄": "=BE58-3"}, {"序": 10, "回診日期": "2026-06-16", "客服欄": "=TEXT(BE58+2,\"mm/dd\")", "顧問2前3天欄": "=BJ58-3"}, {"序": 11, "回診日期": "2026-06-23", "客服欄": "=TEXT(BJ58+2,\"mm/dd\")", "顧問2前3天欄": "=BO58-3"}, {"序": 12, "回診日期": "2026-07-10", "客服欄": "=TEXT(BO58+2,\"mm/dd\")", "顧問2前3天欄": "=BT58-3"}], "回診次數": 12, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-57-葉大振"}, {"區域": "台北", "編號": "58", "方案內容": "1年期", "姓名": "洪慶彰", "生日": "431221", "顧問1": "陳欣怡", "顧問2": "祁瑄", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L59+6,\"mm/dd\")", "顧問2前3天欄": "=Q59-3"}, {"序": 2, "回診日期": "2026-04-13", "客服欄": "=TEXT(Q59+2,\"mm/dd\")", "顧問2前3天欄": "=V59-3"}, {"序": 3, "回診日期": "2026-04-27", "客服欄": "=TEXT(V59+2,\"mm/dd\")", "顧問2前3天欄": "=AA59-3"}, {"序": 4, "回診日期": "2026-05-02", "客服欄": "=TEXT(AA59+2,\"mm/dd\")", "顧問2前3天欄": "=AF59-3"}, {"序": 5, "回診日期": "2026-05-11", "客服欄": "=TEXT(AF59+2,\"mm/dd\")", "顧問2前3天欄": "=AK59-3"}, {"序": 6, "回診日期": "2026-05-18", "客服欄": "=TEXT(AK59+2,\"mm/dd\")", "顧問2前3天欄": "=AP59-3"}, {"序": 7, "回診日期": "2026-05-25", "客服欄": "=TEXT(AP59+2,\"mm/dd\")", "顧問2前3天欄": "=AU59-3"}, {"序": 8, "回診日期": "2026-06-08", "客服欄": "=TEXT(AU59+2,\"mm/dd\")", "顧問2前3天欄": "=AZ59-3"}, {"序": 9, "回診日期": "2026-06-22", "客服欄": "=TEXT(AZ59+2,\"mm/dd\")", "顧問2前3天欄": "=BE59-3"}, {"序": 10, "回診日期": "2026-07-06", "客服欄": "=TEXT(BE59+2,\"mm/dd\")", "顧問2前3天欄": "=BJ59-3"}], "回診次數": 10, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-58-洪慶彰"}, {"區域": "台北", "編號": "59", "方案內容": "1年期", "姓名": "黃運安", "生日": "500310", "顧問1": "陳欣怡", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L60+6,\"mm/dd\")", "顧問2前3天欄": "=Q60-3"}, {"序": 2, "回診日期": "2026-04-18", "客服欄": "=TEXT(Q60+2,\"mm/dd\")", "顧問2前3天欄": "=V60-3"}, {"序": 3, "回診日期": "2026-05-02", "客服欄": "=TEXT(V60+2,\"mm/dd\")", "顧問2前3天欄": "=AA60-3"}, {"序": 4, "回診日期": "2026-05-16", "客服欄": "=TEXT(AA60+2,\"mm/dd\")", "顧問2前3天欄": "=AF60-3"}, {"序": 5, "回診日期": "2026-05-30", "客服欄": "=TEXT(AF60+2,\"mm/dd\")", "顧問2前3天欄": "=AK60-3"}, {"序": 6, "回診日期": "2026-06-11", "客服欄": "=TEXT(AK60+2,\"mm/dd\")", "顧問2前3天欄": "=AP60-3"}, {"序": 7, "回診日期": "2026-06-25", "客服欄": "=TEXT(AP60+2,\"mm/dd\")", "顧問2前3天欄": "=AU60-3"}], "回診次數": 7, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-59-黃運安"}, {"區域": "台北", "編號": "60", "方案內容": "1年期", "姓名": "盧兆欣", "生日": "470430", "顧問1": "陳欣怡", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "", "顧問2前3天欄": "=Q61-3"}, {"序": 2, "回診日期": "2026-04-04", "客服欄": "=TEXT(Q61+2,\"mm/dd\")", "顧問2前3天欄": "=V61-3"}, {"序": 3, "回診日期": "2026-04-18", "客服欄": "=TEXT(V61+2,\"mm/dd\")", "顧問2前3天欄": "=AA61-3"}, {"序": 4, "回診日期": "2026-05-02", "客服欄": "=TEXT(AA61+2,\"mm/dd\")", "顧問2前3天欄": "=AF61-3"}, {"序": 5, "回診日期": "2026-05-11", "客服欄": "=TEXT(AF61+2,\"mm/dd\")", "顧問2前3天欄": "=AK61-3"}, {"序": 6, "回診日期": "2026-05-23", "客服欄": "=TEXT(AK61+2,\"mm/dd\")", "顧問2前3天欄": "=AP61-3"}, {"序": 7, "回診日期": "2026-06-06", "客服欄": "=TEXT(AP61+2,\"mm/dd\")", "顧問2前3天欄": "=AU61-3"}, {"序": 8, "回診日期": "2026-06-20", "客服欄": "=TEXT(AU61+2,\"mm/dd\")", "顧問2前3天欄": "=AZ61-3"}, {"序": 9, "回診日期": "2026-07-04", "客服欄": "=TEXT(AZ61+2,\"mm/dd\")", "顧問2前3天欄": "=BE61-3"}, {"序": 10, "回診日期": "2026-07-18", "客服欄": "=TEXT(BE61+2,\"mm/dd\")", "顧問2前3天欄": "=BJ61-3"}], "回診次數": 10, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-60-盧兆欣"}, {"區域": "台北", "編號": "61", "方案內容": "1年期", "姓名": "張淑霞", "生日": "360910", "顧問1": "高羽婕", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-26", "所有回診": [{"序": 1, "回診日期": "2026-04-07", "客服欄": "=TEXT(L62+6,\"mm/dd\")", "顧問2前3天欄": "=Q62-3"}, {"序": 2, "回診日期": "2026-04-17", "客服欄": "=TEXT(Q62+2,\"mm/dd\")", "顧問2前3天欄": "=V62-3"}, {"序": 3, "回診日期": "2026-05-01", "客服欄": "=TEXT(V62+2,\"mm/dd\")", "顧問2前3天欄": "=AA62-3"}, {"序": 4, "回診日期": "2026-05-15", "客服欄": "=TEXT(AA62+2,\"mm/dd\")", "顧問2前3天欄": "=AF62-3"}, {"序": 5, "回診日期": "2026-05-29", "客服欄": "=TEXT(AF62+2,\"mm/dd\")", "顧問2前3天欄": "=AK62-3"}, {"序": 6, "回診日期": "2026-06-12", "客服欄": "=TEXT(AK62+2,\"mm/dd\")", "顧問2前3天欄": "=AP62-3"}, {"序": 7, "回診日期": "2026-06-26", "客服欄": "=TEXT(AP62+2,\"mm/dd\")", "顧問2前3天欄": "=AU62-3"}], "回診次數": 7, "下一次回診日期": "2026-06-26", "距離天數": 7, "回診前3天": false, "資料異常": [], "__id": "台北-61-張淑霞"}, {"區域": "台北", "編號": "62", "方案內容": "1年期", "姓名": "李王秀枝", "生日": "300207", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L63+6,\"mm/dd\")", "顧問2前3天欄": "=Q63-3"}, {"序": 2, "回診日期": "2026-04-11", "客服欄": "=TEXT(Q63+2,\"mm/dd\")", "顧問2前3天欄": "=V63-3"}, {"序": 3, "回診日期": "2026-04-25", "客服欄": "=TEXT(V63+2,\"mm/dd\")", "顧問2前3天欄": "=AA63-3"}, {"序": 4, "回診日期": "2026-05-09", "客服欄": "=TEXT(AA63+2,\"mm/dd\")", "顧問2前3天欄": "=AF63-3"}, {"序": 5, "回診日期": "2026-05-23", "客服欄": "=TEXT(AF63+2,\"mm/dd\")", "顧問2前3天欄": "=AK63-3"}, {"序": 6, "回診日期": "2026-06-06", "客服欄": "=TEXT(AK63+2,\"mm/dd\")", "顧問2前3天欄": "=AP63-3"}, {"序": 7, "回診日期": "2026-06-23", "客服欄": "=TEXT(AP63+2,\"mm/dd\")", "顧問2前3天欄": "=AU63-3"}], "回診次數": 7, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-62-李王秀枝"}, {"區域": "台北", "編號": "63", "方案內容": "1年期", "姓名": "孫榮謙", "生日": "460410", "顧問1": "陳欣怡", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L64+6,\"mm/dd\")", "顧問2前3天欄": "=Q64-3"}, {"序": 2, "回診日期": "2026-04-21", "客服欄": "=TEXT(Q64+2,\"mm/dd\")", "顧問2前3天欄": "=V64-3"}, {"序": 3, "回診日期": "2026-05-05", "客服欄": "=TEXT(V64+2,\"mm/dd\")", "顧問2前3天欄": "=AA64-3"}, {"序": 4, "回診日期": "2026-05-12", "客服欄": "=TEXT(AA64+2,\"mm/dd\")", "顧問2前3天欄": "=AF64-3"}, {"序": 5, "回診日期": "2026-05-26", "客服欄": "=TEXT(AF64+2,\"mm/dd\")", "顧問2前3天欄": "=AK64-3"}, {"序": 6, "回診日期": "2026-06-09", "客服欄": "=TEXT(AK64+2,\"mm/dd\")", "顧問2前3天欄": "=AP64-3"}, {"序": 7, "回診日期": "2026-06-30", "客服欄": "=TEXT(AP64+2,\"mm/dd\")", "顧問2前3天欄": "=AU64-3"}], "回診次數": 7, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-63-孫榮謙"}, {"區域": "台北", "編號": "64", "方案內容": "1年期", "姓名": "鄭俊吉", "生日": "410922", "顧問1": "高羽婕", "顧問2": "李濟柔", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-26", "所有回診": [{"序": 1, "回診日期": "2026-04-07", "客服欄": "=TEXT(L65+6,\"mm/dd\")", "顧問2前3天欄": "=Q65-3"}, {"序": 2, "回診日期": "2026-04-24", "客服欄": "=TEXT(Q65+2,\"mm/dd\")", "顧問2前3天欄": "=V65-3"}, {"序": 3, "回診日期": "2026-05-08", "客服欄": "=TEXT(V65+2,\"mm/dd\")", "顧問2前3天欄": "=AA65-3"}, {"序": 4, "回診日期": "2026-05-29", "客服欄": "=TEXT(AA65+2,\"mm/dd\")", "顧問2前3天欄": "=AF65-3"}, {"序": 5, "回診日期": "2026-06-26", "客服欄": "=TEXT(AF65+2,\"mm/dd\")", "顧問2前3天欄": "=AK65-3"}], "回診次數": 5, "下一次回診日期": "2026-06-26", "距離天數": 7, "回診前3天": false, "資料異常": [], "__id": "台北-64-鄭俊吉"}, {"區域": "台北", "編號": "65", "方案內容": "1年期", "姓名": "陳彩玥", "生日": "300105", "顧問1": "林家君", "顧問2": "張雅馨", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L66+6,\"mm/dd\")", "顧問2前3天欄": "=Q66-3"}, {"序": 2, "回診日期": "2026-04-17", "客服欄": "=TEXT(Q66+2,\"mm/dd\")", "顧問2前3天欄": "=V66-3"}, {"序": 3, "回診日期": "2026-05-01", "客服欄": "=TEXT(V66+2,\"mm/dd\")", "顧問2前3天欄": "=AA66-3"}, {"序": 4, "回診日期": "2026-05-09", "客服欄": "=TEXT(AA66+2,\"mm/dd\")", "顧問2前3天欄": "=AF66-3"}, {"序": 5, "回診日期": "2026-05-23", "客服欄": "=TEXT(AF66+2,\"mm/dd\")", "顧問2前3天欄": "=AK66-3"}, {"序": 6, "回診日期": "2026-06-05", "客服欄": "=TEXT(AK66+2,\"mm/dd\")", "顧問2前3天欄": "=AP66-3"}, {"序": 7, "回診日期": "2026-06-16", "客服欄": "=TEXT(AP66+2,\"mm/dd\")", "顧問2前3天欄": "=AU66-3"}, {"序": 8, "回診日期": "2026-06-30", "客服欄": "=TEXT(AU66+2,\"mm/dd\")", "顧問2前3天欄": "=AZ66-3"}, {"序": 9, "回診日期": "2026-07-14", "客服欄": "=TEXT(AZ66+2,\"mm/dd\")", "顧問2前3天欄": "=BE66-3"}], "回診次數": 9, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-65-陳彩玥"}, {"區域": "台北", "編號": "66", "方案內容": "1年期", "姓名": "廖中生", "生日": "431116", "顧問1": "林羿君", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L67+6,\"mm/dd\")", "顧問2前3天欄": "=Q67-3"}, {"序": 2, "回診日期": "2026-04-16", "客服欄": "=TEXT(Q67+2,\"mm/dd\")", "顧問2前3天欄": "=V67-3"}, {"序": 3, "回診日期": "2026-04-30", "客服欄": "=TEXT(V67+2,\"mm/dd\")", "顧問2前3天欄": "=AA67-3"}, {"序": 4, "回診日期": "2026-05-14", "客服欄": "=TEXT(AA67+2,\"mm/dd\")", "顧問2前3天欄": "=AF67-3"}, {"序": 5, "回診日期": "2026-05-28", "客服欄": "=TEXT(AF67+2,\"mm/dd\")", "顧問2前3天欄": "=AK67-3"}, {"序": 6, "回診日期": "2026-06-11", "客服欄": "=TEXT(AK67+2,\"mm/dd\")", "顧問2前3天欄": "=AP67-3"}, {"序": 7, "回診日期": "2026-06-25", "客服欄": "=TEXT(AP67+2,\"mm/dd\")", "顧問2前3天欄": "=AU67-3"}], "回診次數": 7, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-66-廖中生"}, {"區域": "台北", "編號": "67", "方案內容": "1年期", "姓名": "楊緯書", "生日": "460603", "顧問1": "陳欣怡", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診", "回診日期": "2026-06-22", "所有回診": [{"序": 1, "回診日期": "2026-04-17", "客服欄": "=TEXT(L68+6,\"mm/dd\")", "顧問2前3天欄": "=Q68-3"}, {"序": 2, "回診日期": "2026-05-04", "客服欄": "=TEXT(Q68+2,\"mm/dd\")", "顧問2前3天欄": "=V68-3"}, {"序": 3, "回診日期": "2026-05-18", "客服欄": "=TEXT(V68+2,\"mm/dd\")", "顧問2前3天欄": "=AA68-3"}, {"序": 4, "回診日期": "2026-06-08", "客服欄": "=TEXT(AA68+2,\"mm/dd\")", "顧問2前3天欄": "=AF68-3"}, {"序": 5, "回診日期": "2026-06-22", "客服欄": "", "顧問2前3天欄": ""}], "回診次數": 5, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-67-楊緯書"}, {"區域": "台北", "編號": "68", "方案內容": "1年期", "姓名": "蔡玉錢", "生日": "420102", "顧問1": "陳毅勛", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-04-09", "客服欄": "=TEXT(L69+6,\"mm/dd\")", "顧問2前3天欄": "=Q69-3"}, {"序": 2, "回診日期": "2026-04-21", "客服欄": "=TEXT(Q69+2,\"mm/dd\")", "顧問2前3天欄": "=V69-3"}, {"序": 3, "回診日期": "2026-05-05", "客服欄": "=TEXT(V69+2,\"mm/dd\")", "顧問2前3天欄": "=AA69-3"}, {"序": 4, "回診日期": "2026-05-19", "客服欄": "=TEXT(AA69+2,\"mm/dd\")", "顧問2前3天欄": "=AF69-3"}, {"序": 5, "回診日期": "2026-06-02", "客服欄": "=TEXT(AF69+2,\"mm/dd\")", "顧問2前3天欄": "=AK69-3"}, {"序": 6, "回診日期": "2026-06-16", "客服欄": "=TEXT(AK69+2,\"mm/dd\")", "顧問2前3天欄": "=AP69-3"}, {"序": 7, "回診日期": "2026-06-30", "客服欄": "=TEXT(AP69+2,\"mm/dd\")", "顧問2前3天欄": "=AU69-3"}], "回診次數": 7, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-68-蔡玉錢"}, {"區域": "台北", "編號": "69", "方案內容": "1年期", "姓名": "陳惠卿", "生日": "510121", "顧問1": "陳毅勛", "顧問2": "李濟柔", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "", "回診日期": "2026-07-02", "所有回診": [{"序": 1, "回診日期": "2026-04-08", "客服欄": "=TEXT(L70+6,\"mm/dd\")", "顧問2前3天欄": "=Q70-3"}, {"序": 2, "回診日期": "2026-04-20", "客服欄": "=TEXT(Q70+2,\"mm/dd\")", "顧問2前3天欄": "=V70-3"}, {"序": 3, "回診日期": "2026-05-04", "客服欄": "=TEXT(V70+2,\"mm/dd\")", "顧問2前3天欄": "=AA70-3"}, {"序": 4, "回診日期": "2026-05-18", "客服欄": "=TEXT(AA70+2,\"mm/dd\")", "顧問2前3天欄": "=AF70-3"}, {"序": 5, "回診日期": "2026-06-01", "客服欄": "=TEXT(AF70+2,\"mm/dd\")", "顧問2前3天欄": "=AK70-3"}, {"序": 6, "回診日期": "2026-06-15", "客服欄": "=TEXT(AK70+2,\"mm/dd\")", "顧問2前3天欄": "=AP70-3"}, {"序": 7, "回診日期": "2026-07-02", "客服欄": "=TEXT(AP70+2,\"mm/dd\")", "顧問2前3天欄": "=AU70-3"}], "回診次數": 7, "下一次回診日期": "2026-07-02", "距離天數": 13, "回診前3天": false, "資料異常": [], "__id": "台北-69-陳惠卿"}, {"區域": "台北", "編號": "70", "方案內容": "1年期", "姓名": "賴政嘉", "生日": "590524", "顧問1": "林家君", "顧問2": "李濟柔", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-04-22", "客服欄": "=TEXT(L71+6,\"mm/dd\")", "顧問2前3天欄": "=Q71-3"}, {"序": 2, "回診日期": "2026-05-09", "客服欄": "=TEXT(Q71+2,\"mm/dd\")", "顧問2前3天欄": "=V71-3"}, {"序": 3, "回診日期": "2026-05-23", "客服欄": "=TEXT(V71+2,\"mm/dd\")", "顧問2前3天欄": "=AA71-3"}, {"序": 4, "回診日期": "2026-06-06", "客服欄": "=TEXT(AA71+2,\"mm/dd\")", "顧問2前3天欄": "=AF71-3"}, {"序": 5, "回診日期": "2026-06-20", "客服欄": "=TEXT(AF71+2,\"mm/dd\")", "顧問2前3天欄": "=AK71-3"}], "回診次數": 5, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-70-賴政嘉"}, {"區域": "台北", "編號": "71", "方案內容": "1年期", "姓名": "李㫙臻", "生日": "930316", "顧問1": "高羽婕", "顧問2": "蔡幸昀", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-04-18", "客服欄": "=TEXT(L72+6,\"mm/dd\")", "顧問2前3天欄": "=Q72-3"}, {"序": 2, "回診日期": "2026-05-02", "客服欄": "=TEXT(Q72+2,\"mm/dd\")", "顧問2前3天欄": "=V72-3"}, {"序": 3, "回診日期": "2026-05-16", "客服欄": "=TEXT(V72+2,\"mm/dd\")", "顧問2前3天欄": "=AA72-3"}, {"序": 4, "回診日期": "2026-05-29", "客服欄": "=TEXT(AA72+2,\"mm/dd\")", "顧問2前3天欄": "=AF72-3"}, {"序": 5, "回診日期": "2026-06-06", "客服欄": "=TEXT(AF72+2,\"mm/dd\")", "顧問2前3天欄": "=AK72-3"}, {"序": 6, "回診日期": "2026-06-20", "客服欄": "=TEXT(AK72+2,\"mm/dd\")", "顧問2前3天欄": "=AP72-3"}], "回診次數": 6, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-71-李㫙臻"}, {"區域": "台北", "編號": "72", "方案內容": "1年期", "姓名": "莊寧馨", "生日": "660601", "顧問1": "林家君", "顧問2": "許馨予", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-04-23", "客服欄": "=TEXT(L73+6,\"mm/dd\")", "顧問2前3天欄": "=Q73-3"}, {"序": 2, "回診日期": "2026-05-07", "客服欄": "=TEXT(Q73+2,\"mm/dd\")", "顧問2前3天欄": "=V73-3"}, {"序": 3, "回診日期": "2026-05-11", "客服欄": "=TEXT(V73+2,\"mm/dd\")", "顧問2前3天欄": "=AA73-3"}, {"序": 4, "回診日期": "2026-05-23", "客服欄": "=TEXT(AA73+2,\"mm/dd\")", "顧問2前3天欄": "=AF73-3"}, {"序": 5, "回診日期": "2026-06-06", "客服欄": "=TEXT(AF73+2,\"mm/dd\")", "顧問2前3天欄": "=AK73-3"}, {"序": 6, "回診日期": "2026-06-20", "客服欄": "=TEXT(AK73+2,\"mm/dd\")", "顧問2前3天欄": "=AP73-3"}], "回診次數": 6, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-72-莊寧馨"}, {"區域": "台北", "編號": "73", "方案內容": "1年期", "姓名": "林傳彬", "生日": "820622", "顧問1": "陳欣怡", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-25", "所有回診": [{"序": 1, "回診日期": "2026-04-22", "客服欄": "=TEXT(L74+6,\"mm/dd\")", "顧問2前3天欄": "=Q74-3"}, {"序": 2, "回診日期": "2026-05-08", "客服欄": "=TEXT(Q74+2,\"mm/dd\")", "顧問2前3天欄": "=V74-3"}, {"序": 3, "回診日期": "2026-05-25", "客服欄": "=TEXT(V74+2,\"mm/dd\")", "顧問2前3天欄": "=AA74-3"}, {"序": 4, "回診日期": "2026-06-08", "客服欄": "=TEXT(AA74+2,\"mm/dd\")", "顧問2前3天欄": "=AF74-3"}, {"序": 5, "回診日期": "2026-06-25", "客服欄": "=TEXT(AF74+2,\"mm/dd\")", "顧問2前3天欄": "=AK74-3"}], "回診次數": 5, "下一次回診日期": "2026-06-25", "距離天數": 6, "回診前3天": false, "資料異常": [], "__id": "台北-73-林傳彬"}, {"區域": "台北", "編號": "74", "方案內容": "1年期", "姓名": "蔡瑀彤", "生日": "670822", "顧問1": "陳欣怡", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字線上問診(兩週)", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-04-29", "客服欄": "=TEXT(L75+6,\"mm/dd\")", "顧問2前3天欄": "=Q75-3"}, {"序": 2, "回診日期": "2026-05-12", "客服欄": "=TEXT(Q75+2,\"mm/dd\")", "顧問2前3天欄": "=V75-3"}, {"序": 3, "回診日期": "2026-05-26", "客服欄": "=TEXT(V75+2,\"mm/dd\")", "顧問2前3天欄": "=AA75-3"}, {"序": 4, "回診日期": "2026-06-09", "客服欄": "=TEXT(AA75+2,\"mm/dd\")", "顧問2前3天欄": "=AF75-3"}, {"序": 5, "回診日期": "2026-06-30", "客服欄": "=TEXT(AF75+2,\"mm/dd\")", "顧問2前3天欄": "=AK75-3"}], "回診次數": 5, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-74-蔡瑀彤"}, {"區域": "台北", "編號": "75", "方案內容": "1年期", "姓名": "陳亭豫", "生日": "1031216", "顧問1": "高羽婕", "顧問2": "楊淙杰", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-05-04", "客服欄": "=TEXT(L76+6,\"mm/dd\")", "顧問2前3天欄": "=Q76-3"}, {"序": 2, "回診日期": "2026-05-20", "客服欄": "=TEXT(Q76+2,\"mm/dd\")", "顧問2前3天欄": "=V76-3"}, {"序": 3, "回診日期": "2026-06-02", "客服欄": "=TEXT(V76+2,\"mm/dd\")", "顧問2前3天欄": "=AA76-3"}, {"序": 4, "回診日期": "2026-06-17", "客服欄": "=TEXT(AA76+2,\"mm/dd\")", "顧問2前3天欄": "=AF76-3"}, {"序": 5, "回診日期": "2026-06-30", "客服欄": "=TEXT(AF76+2,\"mm/dd\")", "顧問2前3天欄": "=AK76-3"}, {"序": 6, "回診日期": "2026-07-15", "客服欄": "=TEXT(AK76+2,\"mm/dd\")", "顧問2前3天欄": "=AP76-3"}], "回診次數": 6, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-75-陳亭豫"}, {"區域": "台北", "編號": "76", "方案內容": "1年期", "姓名": "陳美根", "生日": "330906", "顧問1": "陳毅勛", "顧問2": "楊淙杰", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "不發送", "備註": "不太會使用手機，電話聯繫關心", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-05-04", "客服欄": "=TEXT(L77+6,\"mm/dd\")", "顧問2前3天欄": "=Q77-3"}, {"序": 2, "回診日期": "2026-05-12", "客服欄": "=TEXT(Q77+2,\"mm/dd\")", "顧問2前3天欄": "=V77-3"}, {"序": 3, "回診日期": "2026-05-26", "客服欄": "=TEXT(V77+2,\"mm/dd\")", "顧問2前3天欄": "=AA77-3"}, {"序": 4, "回診日期": "2026-06-09", "客服欄": "=TEXT(AA77+2,\"mm/dd\")", "顧問2前3天欄": "=AF77-3"}, {"序": 5, "回診日期": "2026-06-23", "客服欄": "=TEXT(AF77+2,\"mm/dd\")", "顧問2前3天欄": "=AK77-3"}, {"序": 6, "回診日期": "2026-07-07", "客服欄": "=TEXT(AK77+2,\"mm/dd\")", "顧問2前3天欄": "=AP77-3"}], "回診次數": 6, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-76-陳美根"}, {"區域": "台北", "編號": "77", "方案內容": "1年期", "姓名": "張珩瑤", "生日": "740411", "顧問1": "陳欣怡", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "院長指示一週線上調整一次", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-05-15", "客服欄": "=TEXT(L78+2,\"mm/dd\")", "顧問2前3天欄": "=Q78-3"}, {"序": 2, "回診日期": "2026-05-23", "客服欄": "=TEXT(Q78+2,\"mm/dd\")", "顧問2前3天欄": "=V78-3"}, {"序": 3, "回診日期": "2026-06-06", "客服欄": "=TEXT(V78+2,\"mm/dd\")", "顧問2前3天欄": "=AA78-3"}, {"序": 4, "回診日期": "2026-06-13", "客服欄": "=TEXT(AA78+2,\"mm/dd\")", "顧問2前3天欄": "=AF78-3"}, {"序": 5, "回診日期": "2026-06-20", "客服欄": "=TEXT(AF78+2,\"mm/dd\")", "顧問2前3天欄": "=AK78-3"}, {"序": 6, "回診日期": "2026-06-26", "客服欄": "=TEXT(AK78+2,\"mm/dd\")", "顧問2前3天欄": "=AP78-3"}], "回診次數": 6, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-77-張珩瑤"}, {"區域": "台北", "編號": "78", "方案內容": "1年期", "姓名": "陳燕綾", "生日": "500824", "顧問1": "林娟帆", "顧問2": "李濟柔", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "5/22手錶教學，6/5抽血", "回診日期": "2026-06-19", "所有回診": [{"序": 1, "回診日期": "2026-05-13", "客服欄": "=TEXT(L79+2,\"mm/dd\")", "顧問2前3天欄": "=Q79-3"}, {"序": 2, "回診日期": "2026-05-22", "客服欄": "=TEXT(Q79+2,\"mm/dd\")", "顧問2前3天欄": "=V79-3"}, {"序": 3, "回診日期": "2026-06-05", "客服欄": "=TEXT(V79+2,\"mm/dd\")", "顧問2前3天欄": "=AA79-3"}, {"序": 4, "回診日期": "2026-06-19", "客服欄": "=TEXT(AA79+2,\"mm/dd\")", "顧問2前3天欄": "=AF79-3"}, {"序": 5, "回診日期": "2026-07-03", "客服欄": "=TEXT(AF79+2,\"mm/dd\")", "顧問2前3天欄": "=AK79-3"}], "回診次數": 5, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "台北-78-陳燕綾"}, {"區域": "台北", "編號": "79", "方案內容": "1年期", "姓名": "陳嬉妙", "生日": "330310", "顧問1": "陳欣怡", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-18", "所有回診": [{"序": 1, "回診日期": "2026-05-14", "客服欄": "=TEXT(L80+2,\"mm/dd\")", "顧問2前3天欄": "=Q80-3"}, {"序": 2, "回診日期": "2026-06-01", "客服欄": "=TEXT(Q80+2,\"mm/dd\")", "顧問2前3天欄": "=V80-3"}, {"序": 3, "回診日期": "2026-06-18", "客服欄": "=TEXT(V80+2,\"mm/dd\")", "顧問2前3天欄": "=AA80-3"}], "回診次數": 3, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-79-陳嬉妙"}, {"區域": "台北", "編號": "80", "方案內容": "1年期", "姓名": "彭秀春", "生日": "410219", "顧問1": "林娟帆", "顧問2": "李濟柔", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "", "備註": "2026/5/21、抽血待約。", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-05-21", "客服欄": "=TEXT(L81+2,\"mm/dd\")", "顧問2前3天欄": "=Q81-3"}, {"序": 2, "回診日期": "2026-06-06", "客服欄": "=TEXT(Q81+2,\"mm/dd\")", "顧問2前3天欄": "=V81-3"}, {"序": 3, "回診日期": "2026-06-15", "客服欄": "=TEXT(V81+2,\"mm/dd\")", "顧問2前3天欄": "=AA81-3"}, {"序": 4, "回診日期": "2026-06-20", "客服欄": "=TEXT(AA81+2,\"mm/dd\")", "顧問2前3天欄": "=AF81-3"}], "回診次數": 4, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-80-彭秀春"}, {"區域": "台北", "編號": "81", "方案內容": "1年期", "姓名": "文潔", "生日": "711215", "顧問1": "陳欣怡", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "6/5抽血", "回診日期": "2026-06-19", "所有回診": [{"序": 1, "回診日期": "2026-05-20", "客服欄": "=TEXT(L82+2,\"mm/dd\")", "顧問2前3天欄": "=Q82-3"}, {"序": 2, "回診日期": "2026-06-05", "客服欄": "=TEXT(Q82+2,\"mm/dd\")", "顧問2前3天欄": "=V82-3"}, {"序": 3, "回診日期": "2026-06-19", "客服欄": "=TEXT(V82+2,\"mm/dd\")", "顧問2前3天欄": "=AA82-3"}], "回診次數": 3, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "台北-81-文潔"}, {"區域": "台北", "編號": "82", "方案內容": "1年期", "姓名": "張麗霜", "生日": "581016", "顧問1": "陳欣怡", "顧問2": "蘇貴鈴", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-06-05", "客服欄": "=TEXT(L83+2,\"mm/dd\")", "顧問2前3天欄": "=Q83-3"}, {"序": 2, "回診日期": "2026-06-20", "客服欄": "=TEXT(Q83+2,\"mm/dd\")", "顧問2前3天欄": "=V83-3"}, {"序": 3, "回診日期": "2026-07-04", "客服欄": "=TEXT(V83+2,\"mm/dd\")", "顧問2前3天欄": "=AA83-3"}], "回診次數": 3, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-82-張麗霜"}, {"區域": "台北", "編號": "83", "方案內容": "1年期", "姓名": "劉昭華", "生日": "700827", "顧問1": "陳毅勛", "顧問2": "蔡幸昀", "客服": "袁羽宣", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "", "備註": "", "回診日期": "2026-06-22", "所有回診": [{"序": 2, "回診日期": "2026-06-08", "客服欄": "=TEXT(Q84+2,\"mm/dd\")", "顧問2前3天欄": "=V84-3"}, {"序": 3, "回診日期": "2026-06-22", "客服欄": "=TEXT(V84+2,\"mm/dd\")", "顧問2前3天欄": "=AA84-3"}, {"序": 4, "回診日期": "2026-07-09", "客服欄": "=TEXT(AA84+2,\"mm/dd\")", "顧問2前3天欄": "=AF84-3"}, {"序": 5, "回診日期": "2026-07-23", "客服欄": "=TEXT(AF84+2,\"mm/dd\")", "顧問2前3天欄": "=AK84-3"}], "回診次數": 4, "下一次回診日期": "2026-06-22", "距離天數": 3, "回診前3天": true, "資料異常": [], "__id": "台北-83-劉昭華"}, {"區域": "台北", "編號": "84", "方案內容": "1年期", "姓名": "林毅庭", "生日": "980915", "顧問1": "林家君", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-16", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L85+2,\"mm/dd\")", "顧問2前3天欄": "=Q85-3"}, {"序": 2, "回診日期": "2026-06-16", "客服欄": "=TEXT(Q85+2,\"mm/dd\")", "顧問2前3天欄": "=V85-3"}], "回診次數": 2, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台北-84-林毅庭"}, {"區域": "台北", "編號": "85", "方案內容": "1年期", "姓名": "李美屏", "生日": "380705", "顧問1": "林家君", "顧問2": "蘇貴鈴", "客服": "李盈蓁", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "紅字線上問診\n患者居住美國", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "X", "客服欄": "=TEXT(L86+2,\"mm/dd\")", "顧問2前3天欄": "=Q86-3"}, {"序": 2, "回診日期": "2026-06-09", "客服欄": "=TEXT(Q86+2,\"mm/dd\")", "顧問2前3天欄": "=V86-3"}, {"序": 3, "回診日期": "2026-06-16", "客服欄": "=TEXT(V86+2,\"mm/dd\")", "顧問2前3天欄": "=AA86-3"}, {"序": 4, "回診日期": "2026-06-23", "客服欄": "=TEXT(AA86+2,\"mm/dd\")", "顧問2前3天欄": "=AF86-3"}, {"序": 5, "回診日期": "2026-07-03", "客服欄": "=TEXT(AF86+2,\"mm/dd\")", "顧問2前3天欄": "=AK86-3"}, {"序": 6, "回診日期": "2026-07-17", "客服欄": "=TEXT(AK86+2,\"mm/dd\")", "顧問2前3天欄": "=AP86-3"}], "回診次數": 6, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台北-85-李美屏"}, {"區域": "台北", "編號": "86", "方案內容": "1年期", "姓名": "孫英智", "生日": "440101", "顧問1": "陳欣怡", "顧問2": "許馨予", "客服": "袁羽宣", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "2026-06-30", "所有回診": [{"序": 1, "回診日期": "2026-06-30", "客服欄": "=TEXT(L87+2,\"mm/dd\")", "顧問2前3天欄": "=Q87-3"}], "回診次數": 1, "下一次回診日期": "2026-06-30", "距離天數": 11, "回診前3天": false, "資料異常": [], "__id": "台北-86-孫英智"}, {"區域": "台北", "編號": "87", "方案內容": "1年期", "姓名": "葉碧霞", "生日": "460626", "顧問1": "陳毅勛", "顧問2": "張雅馨", "客服": "袁羽宣", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "2026-06-20", "所有回診": [{"序": 1, "回診日期": "2026-06-06", "客服欄": "=TEXT(L88+2,\"mm/dd\")", "顧問2前3天欄": "=Q88-3"}, {"序": 2, "回診日期": "2026-06-20", "客服欄": "=TEXT(Q88+2,\"mm/dd\")", "顧問2前3天欄": "=V88-3"}], "回診次數": 2, "下一次回診日期": "2026-06-20", "距離天數": 1, "回診前3天": false, "資料異常": [], "__id": "台北-87-葉碧霞"}, {"區域": "台北", "編號": "88", "方案內容": "1年期", "姓名": "陳麗絲", "生日": "560103", "顧問1": "林家君", "顧問2": "李濟柔", "客服": "", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [], "回診次數": 0, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少客服", "缺少回診日期"], "__id": "台北-88-陳麗絲"}, {"區域": "台北", "編號": "89", "方案內容": "1年期", "姓名": "沈德鈞", "生日": "530928", "顧問1": "高羽婕", "顧問2": "李濟柔", "客服": "", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [], "回診次數": 0, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少客服", "缺少回診日期"], "__id": "台北-89-沈德鈞"}, {"區域": "台北", "編號": "90", "方案內容": "1年期", "姓名": "羅玉英", "生日": "561231", "顧問1": "高羽婕", "顧問2": "李濟柔", "客服": "", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [], "回診次數": 0, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少客服", "缺少回診日期"], "__id": "台北-90-羅玉英"}, {"區域": "台中", "編號": "1", "方案內容": "1年期", "姓名": "莊惠雅", "生日": "680817", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "電話問診", "類型": "自主管理", "客服提醒": "發送", "備註": "紅字電話問診", "回診日期": "2026-06-23", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L2+6,\"mm/dd\")", "顧問2前3天欄": "=Q2-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q2+2,\"mm/dd\")", "顧問2前3天欄": "=V2-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V2+2,\"mm/dd\")", "顧問2前3天欄": "=AA2-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA2+2,\"mm/dd\")", "顧問2前3天欄": "=AF2-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF2+2,\"mm/dd\")", "顧問2前3天欄": "=AK2-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK2+2,\"mm/dd\")", "顧問2前3天欄": "=AP2-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP2+2,\"mm/dd\")", "顧問2前3天欄": "=AU2-3"}, {"序": 8, "回診日期": "2026-06-23", "客服欄": "=TEXT(AU2+2,\"mm/dd\")", "顧問2前3天欄": "=AZ2-3"}], "回診次數": 8, "下一次回診日期": "2026-06-23", "距離天數": 4, "回診前3天": false, "資料異常": [], "__id": "台中-1-莊惠雅"}, {"區域": "台中", "編號": "2", "方案內容": "1年期", "姓名": "郭心冉", "生日": "1020625", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-16", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L3+6,\"mm/dd\")", "顧問2前3天欄": "=Q3-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q3+2,\"mm/dd\")", "顧問2前3天欄": "=V3-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V3+2,\"mm/dd\")", "顧問2前3天欄": "=AA3-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA3+2,\"mm/dd\")", "顧問2前3天欄": "=AF3-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF3+2,\"mm/dd\")", "顧問2前3天欄": "=AK3-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK3+2,\"mm/dd\")", "顧問2前3天欄": "=AP3-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP3+2,\"mm/dd\")", "顧問2前3天欄": "=AU3-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU3+2,\"mm/dd\")", "顧問2前3天欄": "=AZ3-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-2-郭心冉"}, {"區域": "台中", "編號": "3", "方案內容": "1年期", "姓名": "郭展維", "生日": "640409", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-16", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L4+6,\"mm/dd\")", "顧問2前3天欄": "=Q4-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q4+2,\"mm/dd\")", "顧問2前3天欄": "=V4-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V4+2,\"mm/dd\")", "顧問2前3天欄": "=AA4-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA4+2,\"mm/dd\")", "顧問2前3天欄": "=AF4-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF4+2,\"mm/dd\")", "顧問2前3天欄": "=AK4-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK4+2,\"mm/dd\")", "顧問2前3天欄": "=AP4-3"}, {"序": 7, "回診日期": "2026-06-02", "客服欄": "=TEXT(AP4+2,\"mm/dd\")", "顧問2前3天欄": "=AU4-3"}, {"序": 8, "回診日期": "2026-06-16", "客服欄": "=TEXT(AU4+2,\"mm/dd\")", "顧問2前3天欄": "=AZ4-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-3-郭展維"}, {"區域": "台中", "編號": "4", "方案內容": "1年期", "姓名": "陳清月", "生日": "490717", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L5+6,\"mm/dd\")", "顧問2前3天欄": "=Q5-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q5+2,\"mm/dd\")", "顧問2前3天欄": "=V5-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V5+2,\"mm/dd\")", "顧問2前3天欄": "=AA5-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA5+2,\"mm/dd\")", "顧問2前3天欄": "=AF5-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF5+2,\"mm/dd\")", "顧問2前3天欄": "=AK5-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK5+2,\"mm/dd\")", "顧問2前3天欄": "=AP5-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU5+2,\"mm/dd\")", "顧問2前3天欄": "=AZ5-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-4-陳清月"}, {"區域": "台中", "編號": "5", "方案內容": "1年期", "姓名": "黃鈞聖", "生日": "810402", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L6+6,\"mm/dd\")", "顧問2前3天欄": "=Q6-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q6+2,\"mm/dd\")", "顧問2前3天欄": "=V6-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V6+2,\"mm/dd\")", "顧問2前3天欄": "=AA6-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA6+2,\"mm/dd\")", "顧問2前3天欄": "=AF6-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF6+2,\"mm/dd\")", "顧問2前3天欄": "=AK6-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK6+2,\"mm/dd\")", "顧問2前3天欄": "=AP6-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU6+2,\"mm/dd\")", "顧問2前3天欄": "=AZ6-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-5-黃鈞聖"}, {"區域": "台中", "編號": "6", "方案內容": "1年期", "姓名": "湯月緣", "生日": "440726", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "6/12已開照會", "回診日期": "2026-06-27", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L7+6,\"mm/dd\")", "顧問2前3天欄": "=Q7-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q7+2,\"mm/dd\")", "顧問2前3天欄": "=V7-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V7+2,\"mm/dd\")", "顧問2前3天欄": "=AA7-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA7+2,\"mm/dd\")", "顧問2前3天欄": "=AF7-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF7+2,\"mm/dd\")", "顧問2前3天欄": "=AK7-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK7+2,\"mm/dd\")", "顧問2前3天欄": "=AP7-3"}, {"序": 8, "回診日期": "2026-06-27", "客服欄": "=TEXT(AU7+2,\"mm/dd\")", "顧問2前3天欄": "=AZ7-3"}], "回診次數": 7, "下一次回診日期": "2026-06-27", "距離天數": 8, "回診前3天": false, "資料異常": [], "__id": "台中-6-湯月緣"}, {"區域": "台中", "編號": "7", "方案內容": "2年期", "姓名": "蔡采軒", "生日": "1070520", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "5/8照會，5/13已致電關懷", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L8+6,\"mm/dd\")", "顧問2前3天欄": "=Q8-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q8+2,\"mm/dd\")", "顧問2前3天欄": "=V8-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V8+2,\"mm/dd\")", "顧問2前3天欄": "=AA8-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA8+2,\"mm/dd\")", "顧問2前3天欄": "=AF8-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF8+2,\"mm/dd\")", "顧問2前3天欄": "=AK8-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK8+2,\"mm/dd\")", "顧問2前3天欄": "=AP8-3"}, {"序": 7, "回診日期": "2026-06-13", "客服欄": "=TEXT(AP8+2,\"mm/dd\")", "顧問2前3天欄": "=AU8-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU8+2,\"mm/dd\")", "顧問2前3天欄": "=AZ8-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-7-蔡采軒"}, {"區域": "台中", "編號": "8", "方案內容": "1年期", "姓名": "廖杰綸", "生日": "1030706", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L9+6,\"mm/dd\")", "顧問2前3天欄": "=Q9-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q9+2,\"mm/dd\")", "顧問2前3天欄": "=V9-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V9+2,\"mm/dd\")", "顧問2前3天欄": "=AA9-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA9+2,\"mm/dd\")", "顧問2前3天欄": "=AF9-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF9+2,\"mm/dd\")", "顧問2前3天欄": "=AK9-3"}, {"序": 6, "回診日期": "2026-05-13", "客服欄": "=TEXT(AK9+2,\"mm/dd\")", "顧問2前3天欄": "=AP9-3"}, {"序": 7, "回診日期": "2026-05-30", "客服欄": "=TEXT(AP9+2,\"mm/dd\")", "顧問2前3天欄": "=AU9-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU9+2,\"mm/dd\")", "顧問2前3天欄": "=AZ9-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-8-廖杰綸"}, {"區域": "台中", "編號": "9", "方案內容": "2年期", "姓名": "王美紅", "生日": "591127", "顧問1": "陳毅勛", "顧問2": "楊淙杰", "客服": "袁羽宣", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "5/7已開照會，5/13症狀改善，暫不調整", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L10+6,\"mm/dd\")", "顧問2前3天欄": "=Q10-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q10+2,\"mm/dd\")", "顧問2前3天欄": "=V10-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V10+2,\"mm/dd\")", "顧問2前3天欄": "=AA10-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA10+2,\"mm/dd\")", "顧問2前3天欄": "=AF10-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF10+2,\"mm/dd\")", "顧問2前3天欄": "=AK10-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK10+2,\"mm/dd\")", "顧問2前3天欄": "=AP10-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU10+2,\"mm/dd\")", "顧問2前3天欄": "=AZ10-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-9-王美紅"}, {"區域": "台中", "編號": "10", "方案內容": "1年期", "姓名": "王柖允", "生日": "1040505", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "6/12關懷，狀況不錯無須調整。", "回診日期": "2026-06-27", "所有回診": [{"序": 1, "回診日期": "2026-03-21", "客服欄": "=TEXT(L11+6,\"mm/dd\")", "顧問2前3天欄": "=Q11-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q11+2,\"mm/dd\")", "顧問2前3天欄": "=V11-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V11+2,\"mm/dd\")", "顧問2前3天欄": "=AA11-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA11+2,\"mm/dd\")", "顧問2前3天欄": "=AF11-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF11+2,\"mm/dd\")", "顧問2前3天欄": "=AK11-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK11+2,\"mm/dd\")", "顧問2前3天欄": "=AP11-3"}, {"序": 8, "回診日期": "2026-06-27", "客服欄": "=TEXT(AU11+2,\"mm/dd\")", "顧問2前3天欄": "=AZ11-3"}], "回診次數": 7, "下一次回診日期": "2026-06-27", "距離天數": 8, "回診前3天": false, "資料異常": [], "__id": "台中-10-王柖允"}, {"區域": "台中", "編號": "11", "方案內容": "1年期", "姓名": "王祤丞", "生日": "1011221", "顧問1": "高敏軒", "顧問2": "黃芝霖", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "6/15已開照會", "回診日期": "2026-06-27", "所有回診": [{"序": 1, "回診日期": "2026-03-21", "客服欄": "=TEXT(L12+6,\"mm/dd\")", "顧問2前3天欄": "=Q12-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q12+2,\"mm/dd\")", "顧問2前3天欄": "=V12-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V12+2,\"mm/dd\")", "顧問2前3天欄": "=AA12-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA12+2,\"mm/dd\")", "顧問2前3天欄": "=AF12-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF12+2,\"mm/dd\")", "顧問2前3天欄": "=AK12-3"}, {"序": 6, "回診日期": "2026-05-13", "客服欄": "=TEXT(AK12+2,\"mm/dd\")", "顧問2前3天欄": "=AP12-3"}, {"序": 7, "回診日期": "2026-05-30", "客服欄": "=TEXT(AP12+2,\"mm/dd\")", "顧問2前3天欄": "=AU12-3"}, {"序": 8, "回診日期": "2026-06-27", "客服欄": "=TEXT(AU12+2,\"mm/dd\")", "顧問2前3天欄": "=AZ12-3"}], "回診次數": 8, "下一次回診日期": "2026-06-27", "距離天數": 8, "回診前3天": false, "資料異常": [], "__id": "台中-11-王祤丞"}, {"區域": "台中", "編號": "12", "方案內容": "1年期", "姓名": "張婉庭", "生日": "500411", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "電話問診", "類型": "低配合", "客服提醒": "發送", "備註": "5/13有改善，暫不調整。5/26已開照會調整部位。", "回診日期": "2026-05-19", "所有回診": [{"序": 1, "回診日期": "2026-03-05", "客服欄": "=TEXT(L13+6,\"mm/dd\")", "顧問2前3天欄": "=Q13-3"}, {"序": 2, "回診日期": "2026-03-24", "客服欄": "=TEXT(Q13+2,\"mm/dd\")", "顧問2前3天欄": "=V13-3"}, {"序": 3, "回診日期": "2026-04-07", "客服欄": "=TEXT(V13+2,\"mm/dd\")", "顧問2前3天欄": "=AA13-3"}, {"序": 4, "回診日期": "2026-04-21", "客服欄": "=TEXT(AA13+2,\"mm/dd\")", "顧問2前3天欄": "=AF13-3"}, {"序": 5, "回診日期": "2026-05-05", "客服欄": "=TEXT(AF13+2,\"mm/dd\")", "顧問2前3天欄": "=AK13-3"}, {"序": 6, "回診日期": "2026-05-19", "客服欄": "=TEXT(AK13+2,\"mm/dd\")", "顧問2前3天欄": "=AP13-3"}], "回診次數": 6, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-12-張婉庭"}, {"區域": "台中", "編號": "13", "方案內容": "1年期", "姓名": "何昀臻", "生日": "1090322", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "5/14已開照會", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "x", "客服欄": "=TEXT(L14+6,\"mm/dd\")", "顧問2前3天欄": "=Q14-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V14+2,\"mm/dd\")", "顧問2前3天欄": "=AA14-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA14+2,\"mm/dd\")", "顧問2前3天欄": "=AF14-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF14+2,\"mm/dd\")", "顧問2前3天欄": "=AK14-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK14+2,\"mm/dd\")", "顧問2前3天欄": "=AP14-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU14+2,\"mm/dd\")", "顧問2前3天欄": "=AZ14-3"}], "回診次數": 6, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-13-何昀臻"}, {"區域": "台中", "編號": "14", "方案內容": "1年期", "姓名": "廖玉如", "生日": "500601", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "需要引導", "客服提醒": "發送", "備註": "5/29已開照會，6/11出國", "回診日期": "2026-07-11", "所有回診": [{"序": 1, "回診日期": "2026-03-07", "客服欄": "=TEXT(L15+6,\"mm/dd\")", "顧問2前3天欄": "=Q15-3"}, {"序": 2, "回診日期": "2026-03-21", "客服欄": "=TEXT(Q15+2,\"mm/dd\")", "顧問2前3天欄": "=V15-3"}, {"序": 3, "回診日期": "2026-04-04", "客服欄": "=TEXT(V15+2,\"mm/dd\")", "顧問2前3天欄": "=AA15-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA15+2,\"mm/dd\")", "顧問2前3天欄": "=AF15-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF15+2,\"mm/dd\")", "顧問2前3天欄": "=AK15-3"}, {"序": 6, "回診日期": "2026-05-30", "客服欄": "=TEXT(AK15+2,\"mm/dd\")", "顧問2前3天欄": "=AP15-3"}, {"序": 8, "回診日期": "2026-07-11", "客服欄": "=TEXT(AU15+2,\"mm/dd\")", "顧問2前3天欄": "=AZ15-3"}], "回診次數": 7, "下一次回診日期": "2026-07-11", "距離天數": 22, "回診前3天": false, "資料異常": [], "__id": "台中-14-廖玉如"}, {"區域": "台中", "編號": "15", "方案內容": "2年期", "姓名": "歐陽湘玲", "生日": "540219", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "自主管理", "客服提醒": "發送", "備註": "5/8電話問診，5/13已致電關懷，症狀改善，暫不調整", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "x", "客服欄": "=TEXT(L16+6,\"mm/dd\")", "顧問2前3天欄": "=Q16-3"}, {"序": 2, "回診日期": "2026-04-18", "客服欄": "=TEXT(Q16+2,\"mm/dd\")", "顧問2前3天欄": "=V16-3"}, {"序": 4, "回診日期": "2026-04-18", "客服欄": "=TEXT(AA16+2,\"mm/dd\")", "顧問2前3天欄": "=AF16-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AF16+2,\"mm/dd\")", "顧問2前3天欄": "=AK16-3"}, {"序": 6, "回診日期": "2026-05-16", "客服欄": "=TEXT(AK16+2,\"mm/dd\")", "顧問2前3天欄": "=AP16-3"}, {"序": 7, "回診日期": "2026-05-30", "客服欄": "=TEXT(AP16+2,\"mm/dd\")", "顧問2前3天欄": "=AU16-3"}, {"序": 8, "回診日期": "2026-06-13", "客服欄": "=TEXT(AU16+2,\"mm/dd\")", "顧問2前3天欄": "=AZ16-3"}], "回診次數": 7, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-15-歐陽湘玲"}, {"區域": "台中", "編號": "16", "方案內容": "1年期", "姓名": "賴秀玲", "生日": "461127", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "2026/5/20，5/28開始治療，6/1關懷", "回診日期": "2026-06-09", "所有回診": [{"序": 1, "回診日期": "2026-05-20", "客服欄": "=TEXT(L17+2,\"mm/dd\")", "顧問2前3天欄": "=Q17-3"}, {"序": 6, "回診日期": "2026-06-09", "客服欄": "=TEXT(AK17+2,\"mm/dd\")", "顧問2前3天欄": "=AP17-3"}, {"序": 7, "回診日期": "2026-06-09", "客服欄": "=TEXT(AP17+2,\"mm/dd\")", "顧問2前3天欄": "=AU17-3"}, {"序": 8, "回診日期": "2026-06-09", "客服欄": "=TEXT(AU17+2,\"mm/dd\")", "顧問2前3天欄": "=AZ17-3"}], "回診次數": 4, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "台中-16-賴秀玲"}, {"區域": "台中", "編號": "17", "方案內容": "1年期", "姓名": "李林招治", "生日": "350314", "顧問1": "高敏軒", "顧問2": "楊淙杰", "客服": "李盈蓁", "看診狀態": "電話問診", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [], "回診次數": 0, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "台中-17-李林招治"}, {"區域": "高雄", "編號": "1", "方案內容": "1年期", "姓名": "陳素雲", "生日": "561225", "顧問1": "陳怡諠", "顧問2": "邱坤毅", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "都線上照會，", "回診日期": "2026-06-24", "所有回診": [{"序": 1, "回診日期": "2026-02-04", "客服欄": "=TEXT(L2+6,\"mm/dd\")", "顧問2前3天欄": "=Q2-3"}, {"序": 2, "回診日期": "2026-03-12", "客服欄": "=TEXT(Q2+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q2+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-02", "客服欄": "=TEXT(X2+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X2+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-17", "客服欄": "=TEXT(AE2+2,\"mm/dd\")", "顧問2前3天欄": "=AJ2-3"}, {"序": 5, "回診日期": "2026-04-30", "客服欄": "=TEXT(AJ2+2,\"mm/dd\")", "顧問2前3天欄": "=AO2-3"}, {"序": 6, "回診日期": "2026-05-18", "客服欄": "=TEXT(AO2+2,\"mm/dd\")", "顧問2前3天欄": "2026-05-29"}, {"序": 7, "回診日期": "2026-06-01", "客服欄": "=TEXT(AT2+2,\"mm/dd\")", "顧問2前3天欄": "=AY2-3"}, {"序": 8, "回診日期": "2026-06-10", "客服欄": "=TEXT(AY2+2,\"mm/dd\")", "顧問2前3天欄": "=BD2-3"}, {"序": 9, "回診日期": "2026-06-24", "客服欄": "=TEXT(BD2+2,\"mm/dd\")", "顧問2前3天欄": "=BI2-3"}], "回診次數": 9, "下一次回診日期": "2026-06-24", "距離天數": 5, "回診前3天": false, "資料異常": [], "__id": "高雄-1-陳素雲"}, {"區域": "高雄", "編號": "2", "方案內容": "3年期", "姓名": "高芳瑾", "生日": "721004", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "【可3周關懷】會員後台及line訊息整理開照會即可", "回診日期": "2026-06-19", "所有回診": [{"序": 1, "回診日期": "2026-03-10", "客服欄": "=TEXT(L3+6,\"mm/dd\")", "顧問2前3天欄": "=Q3-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q3+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q3+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X3+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X3+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-17", "客服欄": "=TEXT(AE3+2,\"mm/dd\")", "顧問2前3天欄": "=AJ3-3"}, {"序": 5, "回診日期": "2026-05-01", "客服欄": "=TEXT(AJ3+2,\"mm/dd\")", "顧問2前3天欄": "=AO3-3"}, {"序": 6, "回診日期": "2026-05-08", "客服欄": "=TEXT(AO3+2,\"mm/dd\")", "顧問2前3天欄": "=AT3-3"}, {"序": 7, "回診日期": "2026-05-22", "客服欄": "=TEXT(AT3+2,\"mm/dd\")", "顧問2前3天欄": "2026-06-05"}, {"序": 8, "回診日期": "2026-06-05", "客服欄": "=TEXT(AY3+2,\"mm/dd\")", "顧問2前3天欄": "=BD3-3"}, {"序": 9, "回診日期": "2026-06-19", "客服欄": "=TEXT(BD3+2,\"mm/dd\")", "顧問2前3天欄": "=BI3-3"}, {"序": 10, "回診日期": "2026-07-12", "客服欄": "=TEXT(BI3+2,\"mm/dd\")", "顧問2前3天欄": "=BN3-3"}], "回診次數": 10, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "高雄-2-高芳瑾"}, {"區域": "高雄", "編號": "3", "方案內容": "2年期", "姓名": "郭家妤", "生日": "640223", "顧問1": "陳怡諠", "顧問2": "郭佳鈞", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "【每周關懷/線上照會或現場回診】6/4已致電，約6/18(四)下午13:00致電追蹤再開立照會(諠)", "回診日期": "2026-06-07", "所有回診": [{"序": 1, "回診日期": "2026-03-13", "客服欄": "=TEXT(L4+6,\"mm/dd\")", "顧問2前3天欄": "=Q4-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q4+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q4+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X4+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X4+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE4+2,\"mm/dd\")", "顧問2前3天欄": "=AJ4-3"}, {"序": 5, "回診日期": "2026-05-08", "客服欄": "=TEXT(AJ4+2,\"mm/dd\")", "顧問2前3天欄": "=AO4-3"}, {"序": 6, "回診日期": "2026-05-15", "客服欄": "=TEXT(AO4+2,\"mm/dd\")", "顧問2前3天欄": "=AT4-3"}, {"序": 7, "回診日期": "2026-05-22", "客服欄": "=TEXT(AT4+2,\"mm/dd\")", "顧問2前3天欄": "=AY4-3"}, {"序": 8, "回診日期": "2026-05-29", "客服欄": "=TEXT(AY4+2,\"mm/dd\")", "顧問2前3天欄": "=BD4-3"}, {"序": 9, "回診日期": "2026-06-07", "客服欄": "=TEXT(BD4+2,\"mm/dd\")", "顧問2前3天欄": "=BI4-3"}], "回診次數": 9, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-3-郭家妤"}, {"區域": "高雄", "編號": "4", "方案內容": "2年期", "姓名": "沈岑駿", "生日": "631122", "顧問1": "陳怡諠", "顧問2": "郭佳鈞", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "【每周關懷/線上照會】已約下次6/17(三)晚上8點致電關心並每周開立照會", "回診日期": "2026-06-13", "所有回診": [{"序": 1, "回診日期": "2026-03-13", "客服欄": "=TEXT(L5+6,\"mm/dd\")", "顧問2前3天欄": "=Q5-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q5+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q5+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-06", "客服欄": "=TEXT(X5+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X5+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE5+2,\"mm/dd\")", "顧問2前3天欄": "=AJ5-3"}, {"序": 5, "回診日期": "2026-05-02", "客服欄": "=TEXT(AJ5+2,\"mm/dd\")", "顧問2前3天欄": "=AO5-3"}, {"序": 6, "回診日期": "2026-05-08", "客服欄": "=TEXT(AO5+2,\"mm/dd\")", "顧問2前3天欄": "=AT5-3"}, {"序": 7, "回診日期": "2026-05-22", "客服欄": "=TEXT(AT5+2,\"mm/dd\")", "顧問2前3天欄": "=AY5-3"}, {"序": 8, "回診日期": "2026-05-29", "客服欄": "=TEXT(AY5+2,\"mm/dd\")", "顧問2前3天欄": "=BD5-3"}, {"序": 9, "回診日期": "2026-06-06", "客服欄": "=TEXT(BD5+2,\"mm/dd\")", "顧問2前3天欄": "=BI5-3"}, {"序": 10, "回診日期": "2026-06-13", "客服欄": "=TEXT(BI5+2,\"mm/dd\")", "顧問2前3天欄": "=BN5-3"}], "回診次數": 10, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-4-沈岑駿"}, {"區域": "高雄", "編號": "5", "方案內容": "2年期", "姓名": "施庚申", "生日": "540714", "顧問1": "陳怡諠", "顧問2": "陳怡諠", "客服": "李昀儒", "看診狀態": "雲端", "類型": "需要引導", "客服提醒": "發送", "備註": "線上問診\n(10-12點較有空)預約6/9(二)致電", "回診日期": "2026-06-17", "所有回診": [{"序": 1, "回診日期": "2026-03-04", "客服欄": "=TEXT(L6+6,\"mm/dd\")", "顧問2前3天欄": "=Q6-3"}, {"序": 2, "回診日期": "2026-03-18", "客服欄": "=TEXT(Q6+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q6+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-02", "客服欄": "=TEXT(X6+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X6+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-16", "客服欄": "=TEXT(AE6+2,\"mm/dd\")", "顧問2前3天欄": "=AJ6-3"}, {"序": 5, "回診日期": "2026-04-29", "客服欄": "=TEXT(AJ6+2,\"mm/dd\")", "顧問2前3天欄": "=AO6-3"}, {"序": 6, "回診日期": "2026-05-13", "客服欄": "=TEXT(AO6+2,\"mm/dd\")", "顧問2前3天欄": "=AT6-3"}, {"序": 7, "回診日期": "2026-05-29", "客服欄": "=TEXT(AT6+2,\"mm/dd\")", "顧問2前3天欄": "=AY6-3"}, {"序": 8, "回診日期": "2026-06-17", "客服欄": "=TEXT(AY6+2,\"mm/dd\")", "顧問2前3天欄": "=BD6-3"}], "回診次數": 8, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-5-施庚申"}, {"區域": "高雄", "編號": "6", "方案內容": "1年期", "姓名": "張慧修", "生日": "500711", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "發送", "備註": "【每周關懷/線上照會】已詢問下次6/18(四)12:30-13:00", "回診日期": "2026-06-15", "所有回診": [{"序": 1, "回診日期": "2026-03-13", "客服欄": "=TEXT(L7+6,\"mm/dd\")", "顧問2前3天欄": "=Q7-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q7+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q7+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X7+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X7+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-16", "客服欄": "=TEXT(AE7+2,\"mm/dd\")", "顧問2前3天欄": "=AJ7-3"}, {"序": 5, "回診日期": "2026-04-24", "客服欄": "=TEXT(AJ7+2,\"mm/dd\")", "顧問2前3天欄": "=AO7-3"}, {"序": 6, "回診日期": "2026-05-08", "客服欄": "=TEXT(AO7+2,\"mm/dd\")", "顧問2前3天欄": "=AT7-3"}, {"序": 7, "回診日期": "2026-05-15", "客服欄": "=TEXT(AT7+2,\"mm/dd\")", "顧問2前3天欄": "=AY7-3"}, {"序": 8, "回診日期": "2026-05-22", "客服欄": "=TEXT(AY7+2,\"mm/dd\")", "顧問2前3天欄": "=BD7-3"}, {"序": 9, "回診日期": "2026-06-04", "客服欄": "=TEXT(BD7+2,\"mm/dd\")", "顧問2前3天欄": "=BI7-3"}, {"序": 10, "回診日期": "2026-06-08", "客服欄": "=TEXT(BI7+2,\"mm/dd\")", "顧問2前3天欄": "=BN7-3"}, {"序": 11, "回診日期": "2026-06-15", "客服欄": "=TEXT(BN7+2,\"mm/dd\")", "顧問2前3天欄": "=BS7-3"}], "回診次數": 11, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-6-張慧修"}, {"區域": "高雄", "編號": "7", "方案內容": "1年期", "姓名": "鄭語蘋", "生日": "300826", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "4週回診", "類型": "自主管理", "客服提醒": "不發送", "備註": "會員僅使用調節衣(租2件無押金)+指環治療、3周現場回診", "回診日期": "2026-07-01", "所有回診": [{"序": 1, "回診日期": "2026-02-25", "客服欄": "=TEXT(L8+6,\"mm/dd\")", "顧問2前3天欄": "=Q8-3"}, {"序": 2, "回診日期": "2026-03-25", "客服欄": "=TEXT(Q8+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q8+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-15", "客服欄": "=TEXT(X8+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X8+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-05-06", "客服欄": "=TEXT(AE8+2,\"mm/dd\")", "顧問2前3天欄": "=AJ8-3"}, {"序": 5, "回診日期": "2026-05-06", "客服欄": "=TEXT(AJ8+2,\"mm/dd\")", "顧問2前3天欄": "=AO8-3"}, {"序": 6, "回診日期": "2026-06-03", "客服欄": "=TEXT(AO8+2,\"mm/dd\")", "顧問2前3天欄": "=AT8-3"}, {"序": 7, "回診日期": "2026-07-01", "客服欄": "=TEXT(AT8+2,\"mm/dd\")", "顧問2前3天欄": "=AY8-3"}], "回診次數": 7, "下一次回診日期": "2026-07-01", "距離天數": 12, "回診前3天": false, "資料異常": [], "__id": "高雄-7-鄭語蘋"}, {"區域": "高雄", "編號": "8", "方案內容": "1年期", "姓名": "楊翔德", "生日": "1000716", "顧問1": "陳怡諠", "顧問2": "邱坤毅", "客服": "李昀儒", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "不發送", "備註": "坤毅關懷就好 (表示不回診)皆先照會", "回診日期": "2026-05-25", "所有回診": [{"序": 1, "回診日期": "2026-03-13", "客服欄": "=TEXT(L9+6,\"mm/dd\")", "顧問2前3天欄": "=Q9-3"}, {"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q9+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q9+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X9+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X9+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE9+2,\"mm/dd\")", "顧問2前3天欄": "=AJ9-3"}, {"序": 5, "回診日期": "2026-05-08", "客服欄": "=TEXT(AJ9+2,\"mm/dd\")", "顧問2前3天欄": "=AO9-3"}, {"序": 6, "回診日期": "2026-05-25", "客服欄": "=TEXT(AO9+2,\"mm/dd\")", "顧問2前3天欄": "=AT9-3"}], "回診次數": 6, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-8-楊翔德"}, {"區域": "高雄", "編號": "9", "方案內容": "3年期", "姓名": "紀榮二", "生日": "510709", "顧問1": "陳怡諠", "顧問2": "邱坤毅", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "行動不便統一電話問診", "回診日期": "2026-07-01", "所有回診": [{"序": 1, "回診日期": "2026-03-12", "客服欄": "=TEXT(L10+6,\"mm/dd\")", "顧問2前3天欄": "=Q10-3"}, {"序": 2, "回診日期": "2026-03-25", "客服欄": "=TEXT(Q10+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q10+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-08", "客服欄": "=TEXT(X10+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X10+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE10+2,\"mm/dd\")", "顧問2前3天欄": "=AJ10-3"}, {"序": 5, "回診日期": "2026-05-06", "客服欄": "=TEXT(AJ10+2,\"mm/dd\")", "顧問2前3天欄": "=AO10-3"}, {"序": 6, "回診日期": "2026-05-20", "客服欄": "=TEXT(AO10+2,\"mm/dd\")", "顧問2前3天欄": "=AT10-3"}, {"序": 7, "回診日期": "2026-06-03", "客服欄": "=TEXT(AT10+2,\"mm/dd\")", "顧問2前3天欄": "=AY10-3"}, {"序": 8, "回診日期": "2026-06-17", "客服欄": "=TEXT(AY10+2,\"mm/dd\")", "顧問2前3天欄": "=BD10-3"}, {"序": 9, "回診日期": "2026-07-01", "客服欄": "=TEXT(BD10+2,\"mm/dd\")", "顧問2前3天欄": "=BI10-3"}], "回診次數": 9, "下一次回診日期": "2026-07-01", "距離天數": 12, "回診前3天": false, "資料異常": [], "__id": "高雄-9-紀榮二"}, {"區域": "高雄", "編號": "10", "方案內容": "1年期", "姓名": "孫鶯梅", "生日": "530105", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "低配合", "客服提醒": "發送", "備註": "回診前關心詢問是否回診或線上照會", "回診日期": "2026-06-05", "所有回診": [{"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q11+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q11+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X11+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X11+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE11+2,\"mm/dd\")", "顧問2前3天欄": "=AJ11-3"}, {"序": 5, "回診日期": "2026-05-08", "客服欄": "=TEXT(AJ11+2,\"mm/dd\")", "顧問2前3天欄": "=AO11-3"}, {"序": 6, "回診日期": "2026-05-22", "客服欄": "=TEXT(AO11+2,\"mm/dd\")", "顧問2前3天欄": "=AT11-3"}, {"序": 7, "回診日期": "2026-06-05", "客服欄": "=TEXT(AT11+2,\"mm/dd\")", "顧問2前3天欄": "=AY11-3"}], "回診次數": 6, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-10-孫鶯梅"}, {"區域": "高雄", "編號": "11", "方案內容": "1年期", "姓名": "林俊良", "生日": "610815", "顧問1": "陳怡諠", "顧問2": "郭佳鈞", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "自主管理", "客服提醒": "發送", "備註": "", "回診日期": "2026-06-19", "所有回診": [{"序": 2, "回診日期": "2026-03-27", "客服欄": "=TEXT(Q12+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q12+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-10", "客服欄": "=TEXT(X12+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X12+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-24", "客服欄": "=TEXT(AE12+2,\"mm/dd\")", "顧問2前3天欄": "=AJ12-3"}, {"序": 5, "回診日期": "2026-05-08", "客服欄": "=TEXT(AJ12+2,\"mm/dd\")", "顧問2前3天欄": "=AO12-3"}, {"序": 6, "回診日期": "2026-05-22", "客服欄": "=TEXT(AO12+2,\"mm/dd\")", "顧問2前3天欄": "=AT12-3"}, {"序": 7, "回診日期": "2026-06-05", "客服欄": "=TEXT(AT12+2,\"mm/dd\")", "顧問2前3天欄": "=AY12-3"}, {"序": 8, "回診日期": "2026-06-19", "客服欄": "=TEXT(AY12+2,\"mm/dd\")", "顧問2前3天欄": "=BD12-3"}], "回診次數": 7, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "高雄-11-林俊良"}, {"區域": "高雄", "編號": "12", "方案內容": "1年期", "姓名": "王若熙", "生日": "1061016", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "(3周關懷即可)，每次關心預約下次致電時間", "回診日期": "2026-07-03", "所有回診": [{"序": 1, "回診日期": "2026-04-23", "客服欄": "=TEXT(L13+6,\"mm/dd\")", "顧問2前3天欄": "=Q13-3"}, {"序": 2, "回診日期": "2026-04-23", "客服欄": "=TEXT(Q13+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(Q13+7,\"mm/dd\")"}, {"序": 3, "回診日期": "2026-04-23", "客服欄": "=TEXT(X13+2,\"mm/dd\")", "顧問2前3天欄": "=TEXT(X13+7,\"mm/dd\")"}, {"序": 4, "回診日期": "2026-04-23", "客服欄": "=TEXT(AE13+2,\"mm/dd\")", "顧問2前3天欄": "=AJ13-3"}, {"序": 5, "回診日期": "2026-05-06", "客服欄": "=TEXT(AJ13+2,\"mm/dd\")", "顧問2前3天欄": "=AO13-3"}, {"序": 6, "回診日期": "2026-05-27", "客服欄": "=TEXT(AO13+2,\"mm/dd\")", "顧問2前3天欄": "=AT13-3"}, {"序": 7, "回診日期": "2026-06-12", "客服欄": "=TEXT(AT13+2,\"mm/dd\")", "顧問2前3天欄": "=AY13-3"}, {"序": 8, "回診日期": "2026-07-03", "客服欄": "=TEXT(AY13+2,\"mm/dd\")", "顧問2前3天欄": "=BD13-3"}], "回診次數": 8, "下一次回診日期": "2026-07-03", "距離天數": 14, "回診前3天": false, "資料異常": [], "__id": "高雄-12-王若熙"}, {"區域": "高雄", "編號": "13", "方案內容": "1年期", "姓名": "吳勤娜", "生日": "610114", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "雲端", "類型": "低配合", "客服提醒": "不發送", "備註": "【線上照會】須提前幾日與會員預約致電時間", "回診日期": "2026-06-12", "所有回診": [{"序": 1, "回診日期": "2026-05-15", "客服欄": "=TEXT(L14+6,\"mm/dd\")", "顧問2前3天欄": "=Q14-3"}, {"序": 6, "回診日期": "2026-05-29", "客服欄": "=TEXT(AO14+2,\"mm/dd\")", "顧問2前3天欄": "=AT14-3"}, {"序": 7, "回診日期": "2026-06-12", "客服欄": "=TEXT(AT14+2,\"mm/dd\")", "顧問2前3天欄": "=AY14-3"}], "回診次數": 3, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": [], "__id": "高雄-13-吳勤娜"}, {"區域": "高雄", "編號": "14", "方案內容": "1年期", "姓名": "王黃昭鳳", "生日": "410421", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "5/22交付", "回診日期": "2026-06-19", "所有回診": [{"序": 6, "回診日期": "2026-06-05", "客服欄": "=TEXT(AO15+2,\"mm/dd\")", "顧問2前3天欄": "=AT15-3"}, {"序": 7, "回診日期": "2026-06-19", "客服欄": "=TEXT(AT15+2,\"mm/dd\")", "顧問2前3天欄": "6/17已照會"}, {"序": 8, "回診日期": "2026-07-03", "客服欄": "=TEXT(AY15+2,\"mm/dd\")", "顧問2前3天欄": "=BD15-3"}], "回診次數": 3, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "高雄-14-王黃昭鳳"}, {"區域": "高雄", "編號": "15", "方案內容": "1年期", "姓名": "黃昭珠", "生日": "271220", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "2週回診", "類型": "需要引導", "客服提醒": "發送", "備註": "5/22交付【初期先1周關懷】", "回診日期": "2026-06-19", "所有回診": [{"序": 5, "回診日期": "2026-05-29", "客服欄": "=TEXT(AJ16+2,\"mm/dd\")", "顧問2前3天欄": "=AO16-3"}, {"序": 6, "回診日期": "2026-06-05", "客服欄": "=TEXT(AO16+2,\"mm/dd\")", "顧問2前3天欄": "=AT16-3"}, {"序": 7, "回診日期": "2026-06-12", "客服欄": "=TEXT(AT16+2,\"mm/dd\")", "顧問2前3天欄": "6/17已照會"}, {"序": 8, "回診日期": "2026-06-19", "客服欄": "=TEXT(AY16+2,\"mm/dd\")", "顧問2前3天欄": "=BD16-3"}], "回診次數": 4, "下一次回診日期": "2026-06-19", "距離天數": 0, "回診前3天": false, "資料異常": [], "__id": "高雄-15-黃昭珠"}, {"區域": "高雄", "編號": "16", "方案內容": "3年期", "姓名": "陳勝南", "生日": "401030", "顧問1": "陳怡諠", "顧問2": "邱坤毅", "客服": "李昀儒", "看診狀態": "雲端", "類型": "自主管理", "客服提醒": "發送", "備註": "優先線上照會就好", "回診日期": "2026-07-01", "所有回診": [{"序": 6, "回診日期": "2026-06-03", "客服欄": "=TEXT(AO17+2,\"mm/dd\")", "顧問2前3天欄": "=AT17-3"}, {"序": 7, "回診日期": "2026-06-17", "客服欄": "=TEXT(AT17+2,\"mm/dd\")", "顧問2前3天欄": "=AY17-3"}, {"序": 8, "回診日期": "2026-07-01", "客服欄": "=TEXT(AY17+2,\"mm/dd\")", "顧問2前3天欄": "=BD17-3"}], "回診次數": 3, "下一次回診日期": "2026-07-01", "距離天數": 12, "回診前3天": false, "資料異常": [], "__id": "高雄-16-陳勝南"}, {"區域": "高雄", "編號": "17", "方案內容": "1年期", "姓名": "王名閶", "生日": "420619", "顧問1": "陳怡諠", "顧問2": "許馨予", "客服": "李昀儒", "看診狀態": "", "類型": "", "客服提醒": "", "備註": "", "回診日期": "", "所有回診": [], "回診次數": 0, "下一次回診日期": "", "距離天數": null, "回診前3天": false, "資料異常": ["缺少回診日期"], "__id": "高雄-17-王名閶"}]};
+    let activeUser = "";
+    let activeTab = "mine";
+    let rows = DATA.rows;
+    let activePatientId = "";
+    const supervisors = new Set(["陳毅勛", "趙巧瑋", "祁瑄"]);
+
+    const fields = ["區域","方案內容","姓名","生日","顧問1","顧問2","客服","下一次回診日期","距離天數","看診狀態","類型","客服提醒","備註"];
+    const storageKey = "member-care-dashboard-edits-v2";
+    const newMembersKey = "member-care-new-members-v1";
+    const employeeAccountsKey = "member-care-employee-accounts-v1";
+    const deletedEmployeesKey = "member-care-deleted-employees-v1";
+    const editableOptions = {
+      "方案內容": ["一年期", "二年期", "三年期"],
+      "顧問1": ["林羿君", "林娟帆", "林家君", "高羽婕", "陳欣怡", "陳儀琳", "陳毅勛", "高敏軒", "陳怡諠"],
+      "顧問2": ["邱坤毅", "許馨予", "郭佳鈞", "陳怡諠", "楊淙杰", "黃芝霖", "李濟柔", "祁瑄", "張雅馨", "趙巧瑋", "蔡幸昀", "蘇貴鈴"],
+      "客服": ["李昀儒", "李盈蓁", "袁羽宣"],
+      "看診狀態": ["雲端", "兩週回診", "四週回診", "電話問診", "未交付"],
+      "類型": ["自主管理", "需要引導", "低配合"],
+      "客服提醒": ["發送", "不發送"]
+    };
+    const defaultRoleOptions = {
+      "顧問1": [...editableOptions["顧問1"]],
+      "顧問2": [...editableOptions["顧問2"]],
+      "客服": [...editableOptions["客服"]]
+    };
+    const editableFields = new Set(["方案內容", "顧問1", "顧問2", "客服", "下一次回診日期", "看診狀態", "類型", "客服提醒", "備註"]);
+    const detailFields = ["appRecord", "phoneRecord", "messageRecord", "day2Record", "ccRecord", "otherRecord", "summaryOutput"];
+    const detailElementIds = {
+      appRecord: "detailAppRecord",
+      phoneRecord: "detailPhoneRecord",
+      messageRecord: "detailMessageRecord",
+      day2Record: "detailDay2Record",
+      ccRecord: "detailCcRecord",
+      otherRecord: "detailOtherRecord",
+      summaryOutput: "detailSummaryOutput"
+    };
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    const clean = value => String(value ?? "").trim();
+
+    function init() {
+      applySavedEmployeeAccounts();
+      applySavedNewMembers();
+      applySavedEdits();
+      refreshEmployees();
+      const lastUser = localStorage.getItem("member-care-last-user") || "";
+      if (lastUser && DATA.employees.includes(lastUser)) $("employeeSelect").value = lastUser;
+      $("loginButton").addEventListener("click", login);
+      $("employeeAccountForm").addEventListener("submit", addEmployeeAccount);
+      $("logoutButton").addEventListener("click", logout);
+      $("exportButton").addEventListener("click", exportCurrent);
+      $("baseDate").addEventListener("change", recalcDates);
+      $("search").addEventListener("input", render);
+      $("importFile").addEventListener("change", importWorkbook);
+      $("newMemberForm").addEventListener("submit", addNewMember);
+      detailFields.forEach(field => {
+        const el = $(detailElementIds[field]);
+        if (el) el.addEventListener("input", () => savePatientDetailField(field, el.value));
+      });
+      document.querySelectorAll("[data-tab]").forEach(button => button.addEventListener("click", () => setTab(button.dataset.tab)));
+    }
+
+    function login() {
+      activeUser = $("employeeSelect").value;
+      localStorage.setItem("member-care-last-user", activeUser);
+      $("login").style.display = "none";
+      $("app").style.display = "grid";
+      $("currentUser").textContent = activeUser;
+      $("currentRoles").textContent = rolesForUser(activeUser).join("、") || "尚無角色";
+      updateSupervisorAccess();
+      render();
+    }
+
+    function logout() {
+      closePatientPage();
+      setTab("mine");
+      $("app").style.display = "none";
+      $("login").style.display = "grid";
+    }
+
+    function isSupervisor(user=activeUser) {
+      return supervisors.has(user);
+    }
+
+    function updateSupervisorAccess() {
+      const allowed = isSupervisor();
+      document.querySelectorAll(".supervisor-only").forEach(el => {
+        el.style.display = allowed ? "initial" : "none";
+      });
+      if (!allowed && ["allMembers", "employeeAdmin"].includes(activeTab)) setTab("mine");
+    }
+
+    function rolesForUser(user) {
+      const roles = new Set();
+      getEmployeeAccounts().filter(account => account.name === user).forEach(account => (account.roles || []).forEach(role => roles.add(role)));
+      rows.forEach(row => {
+        if (row["顧問1"] === user) roles.add("顧問1");
+        if (row["顧問2"] === user) roles.add("顧問2");
+        if (row["客服"] === user) roles.add("客服");
+      });
+      return [...roles];
+    }
+
+    function rowRoles(row) {
+      const roles = [];
+      if (row["顧問1"] === activeUser) roles.push("顧問1");
+      if (row["顧問2"] === activeUser) roles.push("顧問2");
+      if (row["客服"] === activeUser) roles.push("客服");
+      return roles;
+    }
+
+    function getEmployeeAccounts() {
+      const raw = localStorage.getItem(employeeAccountsKey);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function getDeletedEmployees() {
+      const raw = localStorage.getItem(deletedEmployeesKey);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveDeletedEmployees(names) {
+      localStorage.setItem(deletedEmployeesKey, JSON.stringify([...new Set(names)].filter(Boolean)));
+    }
+
+    function saveEmployeeAccounts(accounts) {
+      localStorage.setItem(employeeAccountsKey, JSON.stringify(accounts));
+      applySavedEmployeeAccounts();
+      refreshEmployees();
+    }
+
+    function applySavedEmployeeAccounts() {
+      ["顧問1", "顧問2", "客服"].forEach(role => {
+        editableOptions[role] = [...defaultRoleOptions[role]];
+      });
+      const accounts = getEmployeeAccounts();
+      accounts.forEach(account => {
+        (account.roles || []).forEach(role => {
+          if (!editableOptions[role]) editableOptions[role] = [];
+          if (account.name && !editableOptions[role].includes(account.name)) editableOptions[role].push(account.name);
+        });
+      });
+    }
+
+    function addEmployeeAccount(event) {
+      event.preventDefault();
+      const name = clean($("newEmployeeName").value);
+      const roles = [...document.querySelectorAll('input[name="roles"]:checked')].map(input => input.value);
+      if (!name) {
+        alert("請輸入員工姓名。");
+        return;
+      }
+      if (!roles.length) {
+        alert("請至少選擇一個角色。");
+        return;
+      }
+      const accounts = getEmployeeAccounts();
+      const existing = accounts.find(account => account.name === name);
+      if (existing) {
+        existing.roles = [...new Set([...(existing.roles || []), ...roles])];
+      } else {
+        accounts.push({ name, roles });
+      }
+      saveDeletedEmployees(getDeletedEmployees().filter(employee => employee !== name));
+      saveEmployeeAccounts(accounts);
+      $("employeeSelect").value = name;
+      $("employeeAccountForm").reset();
+      renderEmployeeAccountList();
+      markSaved("已新增員工帳號");
+    }
+
+    function renderEmployeeAccountList() {
+      const container = $("employeeAccountList");
+      if (!container) return;
+      const accounts = adminEmployeeAccounts();
+      container.innerHTML = accounts.length
+        ? accounts.map(account => `<span class="employee-chip">${esc(account.name)}｜${esc((account.roles || []).join("、") || "尚無角色")} ${supervisors.has(account.name) ? "" : `<button type="button" data-name="${esc(account.name)}" onclick="deleteEmployeeAccount(this.dataset.name)">刪除</button>`}</span>`).join("")
+        : `<span class="employee-chip">目前沒有可管理的員工帳號</span>`;
+    }
+
+    function adminEmployeeAccounts() {
+      const deleted = new Set(getDeletedEmployees());
+      const map = new Map();
+      ["顧問1", "顧問2", "客服"].forEach(role => {
+        (defaultRoleOptions[role] || []).forEach(name => {
+          if (!deleted.has(name)) {
+            if (!map.has(name)) map.set(name, new Set());
+            map.get(name).add(role);
+          }
+        });
+      });
+      rows.forEach(row => {
+        [["顧問1", row["顧問1"]], ["顧問2", row["顧問2"]], ["客服", row["客服"]]].forEach(([role, name]) => {
+          if (name && !deleted.has(name)) {
+            if (!map.has(name)) map.set(name, new Set());
+            map.get(name).add(role);
+          }
+        });
+      });
+      getEmployeeAccounts().forEach(account => {
+        if (!deleted.has(account.name)) {
+          if (!map.has(account.name)) map.set(account.name, new Set());
+          (account.roles || []).forEach(role => map.get(account.name).add(role));
+        }
+      });
+      return [...map.entries()].map(([name, roles]) => ({ name, roles: [...roles] })).sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+    }
+
+    function deleteEmployeeAccount(name) {
+      if (!isSupervisor()) return;
+      if (supervisors.has(name)) {
+        alert("主管帳號不可刪除，避免失去管理權限。");
+        return;
+      }
+      if (!confirm(`確定刪除員工帳號：${name}？\n既有會員資料中的負責人欄位不會被清空。`)) return;
+      const accounts = getEmployeeAccounts().filter(account => account.name !== name);
+      localStorage.setItem(employeeAccountsKey, JSON.stringify(accounts));
+      saveDeletedEmployees(getDeletedEmployees().concat(name));
+      refreshEmployees();
+      if ($("employeeSelect").value === name) $("employeeSelect").value = activeUser;
+      renderEmployeeAccountList();
+      markSaved("已刪除員工帳號");
+    }
+
+    function mineRows() {
+      return sortRowsByClosestVisit(rows.filter(row => rowRoles(row).length));
+    }
+
+    function allMemberRows() {
+      return isSupervisor() ? sortRowsByClosestVisit(rows) : [];
+    }
+
+    function searchFilter(list) {
+      const query = $("search").value.trim().toLowerCase();
+      if (!query) return list;
+      return sortRowsByClosestVisit(list.filter(row => JSON.stringify(row).toLowerCase().includes(query)));
+    }
+
+    function sortRowsByClosestVisit(list) {
+      return [...list].sort((a, b) => {
+        const keyA = visitSortKey(a);
+        const keyB = visitSortKey(b);
+        return keyA.group - keyB.group || keyA.distance - keyB.distance || keyA.date.localeCompare(keyB.date) || String(a["姓名"] || "").localeCompare(String(b["姓名"] || ""), "zh-Hant");
+      });
+    }
+
+    function visitSortKey(row) {
+      const distance = visitDistance(row);
+      const value = row["下一次回診日期"] || row["回診日期"] || "";
+      if (Number.isFinite(distance) && distance >= 0) return { group: 0, distance, date: value };
+      if (Number.isFinite(distance)) return { group: 1, distance: Math.abs(distance), date: value };
+      return { group: 2, distance: Number.MAX_SAFE_INTEGER, date: value };
+    }
+
+    function visitDistance(row) {
+      if (typeof row["距離天數"] === "number" && Number.isFinite(row["距離天數"])) return row["距離天數"];
+      const value = row["下一次回診日期"] || row["回診日期"] || "";
+      const base = $("baseDate")?.value || DATA.summary.baseDate;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !/^\d{4}-\d{2}-\d{2}$/.test(base)) return null;
+      const diff = Math.round((Date.parse(value + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000);
+      return Number.isFinite(diff) ? diff : null;
+    }
+
+    function setTab(tab) {
+      if (["allMembers", "employeeAdmin"].includes(tab) && !isSupervisor()) tab = "mine";
+      activeTab = tab;
+      document.querySelectorAll("[data-tab]").forEach(button => button.classList.toggle("active", button.dataset.tab === tab));
+      document.querySelectorAll(".panel").forEach(panel => panel.classList.toggle("active", panel.id === tab));
+      const titles = {
+        mine: "我的會員名單",
+        threeDay: "3 天關懷",
+        service: "客服追蹤",
+        visits: "回診日期",
+        exceptions: "資料異常",
+        newMember: "新增會員",
+        allMembers: "全部會員",
+        employeeAdmin: "員工管理"
+      };
+      $("pageTitle").textContent = titles[tab] || "會員關懷 Dashboard";
+    }
+
+    function recalcDates() {
+      const base = $("baseDate").value;
+      rows = rows.map(row => {
+        if (row["下一次回診日期"]) {
+          const diff = Math.round((Date.parse(row["下一次回診日期"] + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000);
+          return {...row, "回診日期": row["下一次回診日期"], "距離天數": Number.isFinite(diff) ? diff : null, "回診前3天": diff === 3};
+        }
+        const visits = (row["所有回診"] || []).map(v => v["回診日期"]).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+        const future = visits.filter(d => d >= base).sort();
+        const next = future[0] || visits.sort().at(-1) || "";
+        const diff = next && next >= base ? Math.round((Date.parse(next + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000) : null;
+        return {...row, "下一次回診日期": future[0] || "", "回診日期": next, "距離天數": diff, "回診前3天": diff === 3};
+      });
+      if (activePatientId) closePatientPage();
+      render();
+      setTab("threeDay");
+      const count = sortRowsByClosestVisit(mineRows().filter(row => row["回診前3天"])).length;
+      $("status").innerHTML = `基準日期已更新為 ${esc(base)}，已顯示回診前 3 天關懷名單：${count} 筆 <span id="saveState" class="save-state">自動存檔已啟用</span>`;
+    }
+
+    function render() {
+      const mine = searchFilter(mineRows());
+      const allMembers = searchFilter(allMemberRows());
+      const three = sortRowsByClosestVisit(mine.filter(row => row["回診前3天"]));
+      const service = sortRowsByClosestVisit(mine.filter(row => row["客服"] === activeUser || clean(row["客服提醒"]) || clean(row["備註"]) || clean(row["看診狀態"])));
+      const exceptions = sortRowsByClosestVisit(mine.filter(row => (row["資料異常"] || []).length));
+      $("metricMine").textContent = mine.length;
+      $("metricThreeDay").textContent = three.length;
+      $("metricService").textContent = service.length;
+      $("metricExceptions").textContent = exceptions.length;
+      $("metricAll").textContent = rows.length;
+      $("mineBadge").textContent = `${mine.length} 筆`;
+      $("threeDayBadge").textContent = `${three.length} 筆`;
+      $("serviceBadge").textContent = `${service.length} 筆`;
+      $("visitsBadge").textContent = `${mine.length} 筆`;
+      $("exceptionsBadge").textContent = `${exceptions.length} 筆`;
+      $("allMembersBadge").textContent = `${allMembers.length} 筆`;
+      $("mineTable").innerHTML = patientList(mine);
+      $("threeDayTable").innerHTML = table(three, true);
+      $("serviceTable").innerHTML = patientList(service);
+      $("visitsTable").innerHTML = visitTable(mine);
+      $("exceptionsTable").innerHTML = exceptionTable(exceptions);
+      $("allMembersTable").innerHTML = patientList(allMembers);
+      renderEmployeeAccountList();
+    }
+
+    function patientList(list) {
+      if (!list.length) return `<div class="empty">目前沒有符合條件的會員。</div>`;
+      return `<div class="patient-list">${list.map(row => `<article class="patient-row">
+        <div class="patient-main">
+          <h4>${esc(row["姓名"] || "未命名會員")}</h4>
+          <div class="patient-meta">
+            <span>${esc(row["區域"] || "")}${row["生日"] ? "｜生日 " + esc(row["生日"]) : ""}</span>
+            <span>我的角色：${roleBadges(row)}</span>
+            <span>距離回診：${row["距離天數"] === null || row["距離天數"] === undefined ? "未定" : esc(row["距離天數"] + " 天")}</span>
+          </div>
+        </div>
+        <div class="patient-stack">
+          ${fieldBlock(row, "方案內容")}
+          ${fieldBlock(row, "下一次回診日期")}
+          <div class="patient-label"><span>HIS連接</span>${hisLinkCell(row)}</div>
+        </div>
+        <div class="patient-stack">
+          ${fieldBlock(row, "看診狀態")}
+          ${fieldBlock(row, "類型")}
+          ${fieldBlock(row, "客服提醒")}
+          ${fieldBlock(row, "備註")}
+        </div>
+        <div class="patient-actions">
+          <button class="link-button" type="button" data-row-id="${esc(row["__id"])}" onclick="openMemberPage(this.dataset.rowId)">開啟資料頁</button>
+        </div>
+      </article>`).join("")}</div>`;
+    }
+
+    function fieldBlock(row, column) {
+      return `<label class="patient-label"><span>${esc(column)}</span>${formatCell(row, column)}</label>`;
+    }
+
+    function table(list, care=false) {
+      if (!list.length) return `<div class="empty">目前沒有符合條件的會員。</div>`;
+      const columns = care ? ["區域","方案內容","姓名","顧問2","客服","下一次回診日期","HIS連接","距離天數","客服提醒","備註"] : ["區域","方案內容","姓名","生日","顧問1","顧問2","客服","下一次回診日期","HIS連接","距離天數","看診狀態","類型","客服提醒","備註"];
+      return `<div class="table-wrap"><table><thead><tr>${columns.map(c => `<th>${esc(c)}</th>`).join("")}<th>我的角色</th><th>資料頁</th></tr></thead><tbody>${list.map(row => `<tr>${columns.map(c => `<td class="${editableFields.has(c) ? (c === "備註" ? "notes-cell" : "edit-cell") : ""}">${formatCell(row, c)}</td>`).join("")}<td>${roleBadges(row)}</td><td><button class="link-button" type="button" data-row-id="${esc(row["__id"])}" onclick="openMemberPage(this.dataset.rowId)">開啟</button></td></tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function visitTable(list) {
+      if (!list.length) return `<div class="empty">目前沒有符合條件的會員。</div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>區域</th><th>姓名</th><th>下一次回診</th><th>歷次回診日期</th><th>我的角色</th></tr></thead><tbody>${list.map(row => `<tr><td>${esc(row["區域"])}</td><td>${esc(row["姓名"])}</td><td>${esc(row["下一次回診日期"])}</td><td>${(row["所有回診"]||[]).map(v => `<span class="visit-chip">${esc(v["回診日期"])}</span>`).join("")}</td><td>${roleBadges(row)}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function exceptionTable(list) {
+      if (!list.length) return `<div class="empty">目前沒有資料異常。</div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>區域</th><th>姓名</th><th>顧問1</th><th>顧問2</th><th>客服</th><th>回診日期</th><th>異常原因</th></tr></thead><tbody>${list.map(row => `<tr><td>${esc(row["區域"])}</td><td>${esc(row["姓名"])}</td><td>${esc(row["顧問1"])}</td><td>${esc(row["顧問2"])}</td><td>${esc(row["客服"])}</td><td>${esc(row["回診日期"])}</td><td>${esc((row["資料異常"]||[]).join("、"))}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function formatCell(row, column) {
+      if (column === "HIS連接") return hisLinkCell(row);
+      if (editableFields.has(column)) return editableCell(row, column);
+      if (column === "距離天數") return row[column] === null || row[column] === undefined ? "" : esc(row[column] + " 天");
+      return esc(row[column]);
+    }
+
+    function hisLinkCell(row) {
+      return `<button class="link-button" type="button" data-name="${esc(row["姓名"] || "")}" data-birthday="${esc(row["生日"] || "")}" onclick="openHisPlaceholder(this)">連接 HIS</button>`;
+    }
+
+    function openHisPlaceholder(button) {
+      const name = button.dataset.name || "";
+      const birthday = button.dataset.birthday || "";
+      alert(`HIS 系統連接預留：${name} ${birthday}\n請提供公司 HIS 的網址規則或 API，之後可改為直接開啟會員 HIS 頁面。`);
+    }
+
+    function editableCell(row, column) {
+      const id = esc(row["__id"]);
+      const value = clean(row[column]);
+      if (column === "下一次回診日期") {
+        return `<input class="edit-input" type="date" data-row-id="${id}" data-field="${esc(column)}" value="${esc(value)}" onchange="handleDateEdit(this)" />`;
+      }
+      if (column === "備註") {
+        return `<textarea class="notes-input" data-row-id="${id}" data-field="${esc(column)}" oninput="handleTextEdit(this)">${esc(value)}</textarea>`;
+      }
+      const options = editableOptions[column] || [];
+      const normalizedValue = normalizeOption(column, value);
+      const isManual = value && !options.includes(normalizedValue);
+      const selected = isManual ? "手動輸入" : normalizedValue;
+      const selectOptions = [`<option value="" ${!selected ? "selected" : ""}>請選擇</option>`].concat(
+        options.concat(["手動輸入"]).map(option => `<option value="${esc(option)}" ${option === selected ? "selected" : ""}>${esc(option)}</option>`)
+      ).join("");
+      return `<select class="edit-select" data-row-id="${id}" data-field="${esc(column)}" onchange="handleSelectEdit(this)">
+        ${selectOptions}
+      </select>
+      <input class="edit-input" type="text" inputmode="text" data-row-id="${id}" data-field="${esc(column)}" value="${esc(isManual ? value : "")}" placeholder="可輸入文字或數字" style="display:${selected === "手動輸入" ? "block" : "none"}" oninput="handleTextEdit(this)" />`;
+    }
+
+    function normalizeOption(column, value) {
+      if (column === "方案內容") {
+        if (value === "1年期") return "一年期";
+        if (value === "2年期") return "二年期";
+        if (value === "3年期") return "三年期";
+      }
+      if (column === "看診狀態") {
+        if (value === "2週回診") return "兩週回診";
+        if (value === "4週回診") return "四週回診";
+      }
+      return value;
+    }
+
+    function handleSelectEdit(control) {
+      const field = control.dataset.field;
+      const row = findRow(control.dataset.rowId);
+      if (!row) return;
+      const manualInput = control.parentElement.querySelector(".edit-input");
+      if (control.value === "手動輸入") {
+        manualInput.style.display = "block";
+        manualInput.focus();
+        if (manualInput.value) updateRow(row, field, manualInput.value);
+        return;
+      } else {
+        manualInput.style.display = "none";
+        manualInput.value = "";
+        updateRow(row, field, control.value);
+      }
+      render();
+    }
+
+    function handleTextEdit(control) {
+      const row = findRow(control.dataset.rowId);
+      if (!row) return;
+      updateRow(row, control.dataset.field, control.value);
+    }
+
+    function handleDateEdit(control) {
+      const row = findRow(control.dataset.rowId);
+      if (!row) return;
+      const value = control.value;
+      row["下一次回診日期"] = value;
+      row["回診日期"] = value;
+      if (value) {
+        row["所有回診"] = row["所有回診"] || [];
+        if (!row["所有回診"].some(visit => visit["回診日期"] === value)) {
+          row["所有回診"].push({"序": row["所有回診"].length + 1, "回診日期": value, "客服欄": "", "顧問2前3天欄": ""});
+        }
+      }
+      recalcRowDate(row);
+      saveEdits();
+      markSaved();
+      render();
+    }
+
+    function recalcRowDate(row) {
+      const base = $("baseDate").value;
+      const value = row["下一次回診日期"] || row["回診日期"] || "";
+      const diff = value ? Math.round((Date.parse(value + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000) : null;
+      row["距離天數"] = Number.isFinite(diff) ? diff : null;
+      row["回診前3天"] = row["距離天數"] === 3;
+    }
+
+    function findRow(id) {
+      return rows.find(row => row["__id"] === id);
+    }
+
+    function updateRow(row, field, value) {
+      row[field] = value;
+      if (["顧問1", "顧問2", "客服"].includes(field)) refreshEmployees();
+      saveEdits();
+      markSaved();
+    }
+
+    function collectEdits() {
+      const edits = {};
+      rows.forEach(row => {
+        edits[row["__id"]] = {
+          "方案內容": row["方案內容"] || "",
+          "顧問1": row["顧問1"] || "",
+          "顧問2": row["顧問2"] || "",
+          "客服": row["客服"] || "",
+          "看診狀態": row["看診狀態"] || "",
+          "類型": row["類型"] || "",
+          "客服提醒": row["客服提醒"] || "",
+          "備註": row["備註"] || "",
+          "下一次回診日期": row["下一次回診日期"] || "",
+          "回診日期": row["回診日期"] || "",
+          "所有回診": row["所有回診"] || [],
+          "距離天數": row["距離天數"],
+          "回診前3天": !!row["回診前3天"]
+        };
+      });
+      return edits;
+    }
+
+    function saveEdits() {
+      localStorage.setItem(storageKey, JSON.stringify(collectEdits()));
+    }
+
+    function applySavedEdits() {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      try {
+        const edits = JSON.parse(raw);
+        rows = rows.map(row => edits[row["__id"]] ? {...row, ...edits[row["__id"]]} : row);
+        refreshEmployees();
+      } catch (error) {
+        console.warn("Saved edits could not be loaded", error);
+      }
+    }
+
+    function applySavedNewMembers() {
+      const raw = localStorage.getItem(newMembersKey);
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw) || [];
+        rows = rows.concat(saved);
+        refreshEmployees();
+      } catch (error) {
+        console.warn("Saved new members could not be loaded", error);
+      }
+    }
+
+    function saveNewMembers(list) {
+      localStorage.setItem(newMembersKey, JSON.stringify(list));
+      refreshEmployees();
+      markSaved("已儲存新增會員");
+    }
+
+    function getSavedNewMembers() {
+      const raw = localStorage.getItem(newMembersKey);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function refreshEmployees() {
+      applySavedEmployeeAccounts();
+      const deleted = new Set(getDeletedEmployees());
+      const optionEmployees = ["顧問1", "顧問2", "客服"].flatMap(role => editableOptions[role] || []);
+      const accountEmployees = getEmployeeAccounts().map(account => account.name);
+      DATA.employees = [...new Set(rows.flatMap(row => [row["顧問1"], row["顧問2"], row["客服"]]).concat(optionEmployees, accountEmployees).filter(Boolean))]
+        .filter(employee => !deleted.has(employee) || supervisors.has(employee))
+        .sort();
+      ["顧問1", "顧問2", "客服"].forEach(role => {
+        editableOptions[role] = (editableOptions[role] || []).filter(employee => !deleted.has(employee) || supervisors.has(employee));
+      });
+      const select = $("employeeSelect");
+      if (select) {
+        const current = select.value || activeUser;
+        select.innerHTML = DATA.employees.map(employee => `<option value="${esc(employee)}">${esc(employee)}</option>`).join("");
+        if (current && DATA.employees.includes(current)) select.value = current;
+      }
+      renderEmployeeAccountList();
+    }
+
+    function addNewMember(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const base = $("baseDate").value;
+      const name = clean(formData.get("姓名"));
+      if (!name) {
+        alert("請輸入會員姓名。");
+        return;
+      }
+      const nextVisit = clean(formData.get("下一次回診日期"));
+      const diff = nextVisit ? Math.round((Date.parse(nextVisit + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000) : null;
+      const id = `新增-${Date.now()}-${name}`;
+      const row = {
+        "__id": id,
+        "區域": clean(formData.get("區域")),
+        "編號": `新增-${Date.now()}`,
+        "方案內容": clean(formData.get("方案內容")),
+        "姓名": name,
+        "生日": clean(formData.get("生日")),
+        "顧問1": clean(formData.get("顧問1")) || activeUser,
+        "顧問2": clean(formData.get("顧問2")),
+        "客服": clean(formData.get("客服")),
+        "下一次回診日期": nextVisit,
+        "回診日期": nextVisit,
+        "所有回診": nextVisit ? [{"序": 1, "回診日期": nextVisit, "客服欄": "", "顧問2前3天欄": ""}] : [],
+        "回診次數": nextVisit ? 1 : 0,
+        "距離天數": diff,
+        "回診前3天": diff === 3,
+        "看診狀態": clean(formData.get("看診狀態")),
+        "類型": clean(formData.get("類型")),
+        "客服提醒": clean(formData.get("客服提醒")),
+        "備註": clean(formData.get("備註")),
+        "資料異常": nextVisit ? [] : ["缺少回診日期"]
+      };
+      const saved = getSavedNewMembers();
+      saved.push(row);
+      rows.push(row);
+      saveNewMembers(saved);
+      form.reset();
+      $("employeeSelect").innerHTML = DATA.employees.map(employee => `<option value="${esc(employee)}">${esc(employee)}</option>`).join("");
+      if (DATA.employees.includes(activeUser)) $("employeeSelect").value = activeUser;
+      render();
+      setTab(row["回診前3天"] ? "threeDay" : "mine");
+      $("status").innerHTML = `已新增會員：${esc(name)} <span id="saveState" class="save-state">已儲存新增會員</span>`;
+    }
+
+    function markSaved(message="已自動存檔") {
+      const el = $("saveState");
+      if (!el) return;
+      el.textContent = message;
+      window.clearTimeout(markSaved.timer);
+      markSaved.timer = window.setTimeout(() => el.textContent = "自動存檔已啟用", 1600);
+    }
+
+    function openMemberPage(rowId) {
+      const row = findRow(rowId);
+      if (!row) return;
+      activePatientId = rowId;
+      document.querySelector(".workspace").style.display = "none";
+      $("detailPage").classList.add("active");
+      $("detailName").textContent = `${row["姓名"] || "未命名會員"} 資料頁`;
+      $("detailSubtitle").textContent = `${row["區域"] || ""}｜${row["方案內容"] || ""}｜我的角色：${rowRoles(row).join("、") || "無"}`;
+      renderPatientOverview(row);
+      renderPatientStatusEditor(row);
+      loadPatientDetail(row);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function openPatientPage(rowId) {
+      openMemberPage(rowId);
+    }
+
+    function closePatientPage() {
+      activePatientId = "";
+      $("detailPage").classList.remove("active");
+      document.querySelector(".workspace").style.display = "";
+      render();
+    }
+
+    function renderPatientOverview(row) {
+      const items = [
+        ["區域", row["區域"]],
+        ["方案內容", row["方案內容"]],
+        ["姓名", row["姓名"]],
+        ["生日", row["生日"]],
+        ["顧問1", row["顧問1"]],
+        ["顧問2", row["顧問2"]],
+        ["客服", row["客服"]],
+        ["下一次回診", row["下一次回診日期"] || row["回診日期"] || "無"]
+      ];
+      $("detailOverview").innerHTML = items.map(([label, value]) => `<div class="detail-item"><span>${esc(label)}</span><strong>${esc(value || "-")}</strong></div>`).join("");
+    }
+
+    function renderPatientStatusEditor(row) {
+      const columns = ["方案內容", "顧問1", "顧問2", "客服", "看診狀態", "類型", "客服提醒", "備註"];
+      $("detailStatusEditor").innerHTML = columns.map(column => `
+        <div class="detail-card">
+          <h4>${esc(column)}</h4>
+          ${editableCell(row, column)}
+        </div>
+      `).join("");
+    }
+
+    function getPatientDetails() {
+      const raw = localStorage.getItem("member-care-patient-details-v1");
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw) || {};
+      } catch (error) {
+        console.warn("Patient details could not be loaded", error);
+        return {};
+      }
+    }
+
+    function savePatientDetails(details) {
+      localStorage.setItem("member-care-patient-details-v1", JSON.stringify(details));
+      markSaved();
+    }
+
+    function loadPatientDetail(row) {
+      const details = getPatientDetails();
+      const detail = details[row["__id"]] || {};
+      detailFields.forEach(field => {
+        const el = $(detailElementIds[field]);
+        if (el) el.value = detail[field] || "";
+      });
+    }
+
+    function savePatientDetailField(field, value) {
+      if (!activePatientId) return;
+      const details = getPatientDetails();
+      details[activePatientId] = details[activePatientId] || {};
+      details[activePatientId][field] = value;
+      savePatientDetails(details);
+    }
+
+    function saveCurrentPatientPage() {
+      if (!activePatientId) return;
+      detailFields.forEach(field => {
+        const el = $(detailElementIds[field]);
+        if (el) savePatientDetailField(field, el.value);
+      });
+      markSaved("已儲存會員資料");
+    }
+
+    function getCurrentPatientDetail() {
+      const details = getPatientDetails();
+      return details[activePatientId] || {};
+    }
+
+    function generatePatientSummary() {
+      const row = findRow(activePatientId);
+      if (!row) return;
+      const detail = getCurrentPatientDetail();
+      const appRecord = $("detailAppRecord").value.trim();
+      const phoneRecord = $("detailPhoneRecord").value.trim();
+      const messageRecord = $("detailMessageRecord").value.trim();
+      const day2Record = $("detailDay2Record").value.trim();
+      const ccRecord = $("detailCcRecord").value.trim();
+      const otherRecord = $("detailOtherRecord").value.trim();
+      const sourceText = [ccRecord, phoneRecord, messageRecord, appRecord, day2Record, otherRecord, row["備註"]].filter(Boolean).join("\n");
+      const symptoms = extractSymptomKeywords(sourceText);
+      const summary = buildFixedSummary(row, {
+        appRecord,
+        phoneRecord,
+        messageRecord,
+        day2Record,
+        ccRecord,
+        otherRecord,
+        symptoms
+      });
+      $("detailSummaryOutput").value = summary;
+      savePatientDetailField("summaryOutput", summary);
+    }
+
+    function fillSampleConcernRecord() {
+      if (!activePatientId) return;
+      const sample = `6/18 關懷_ (病例附上HRV資訊)
+與上週相同持續出現HRV偏低、心率偏高、頭暈、心悸及胸悶，症狀未見明顯改善；夜間下肢發熱與睡眠障礙持續。近期因HRV及InBody變化出現明顯擔憂與情緒低落。排便較前穩定，但新增左膝疼痛。已完成婦產科賀爾蒙抽血檢查，待後續結果追蹤。
+
+本次回診建議優先確認
+1.頭暈、心悸、胸悶持續超過一週，合併心率偏高與HRV長期偏低之變化。
+2.下肢／身體發熱、睡眠中斷及夜間難再入睡的持續情況與可能相關因素。
+3.情緒低落、擔憂增加，以及近期InBody變化與婦產科荷爾蒙檢查結果之後續追蹤。
+4.左膝疼痛持續數日且加重之原因及對活動的影響。
+5.紅光治療期間心率偏高及運動後身體反應變化。`;
+      $("detailMessageRecord").value = sample;
+      savePatientDetailField("messageRecord", sample);
+      generatePatientSummary();
+    }
+
+    function extractSymptomKeywords(text) {
+      const candidates = ["HRV偏低", "心率偏高", "頭暈", "心悸", "胸悶", "下肢發熱", "身體發熱", "睡眠障礙", "睡眠中斷", "情緒低落", "擔憂", "排便", "左膝疼痛", "疼痛", "發熱", "疲勞", "麻", "痠", "痛", "胸口", "呼吸", "胃", "頭痛", "失眠"];
+      const found = candidates.filter(item => text.includes(item));
+      return [...new Set(found)].slice(0, 10);
+    }
+
+    function compactText(text, fallback="未提供") {
+      const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+      if (!cleaned) return fallback;
+      return cleaned.length > 180 ? cleaned.slice(0, 180) + "..." : cleaned;
+    }
+
+    function buildFixedSummary(row, detail) {
+      const allText = [detail.phoneRecord, detail.messageRecord, detail.appRecord, detail.ccRecord, detail.day2Record, detail.otherRecord].filter(Boolean).join("\n");
+      const symptoms = detail.symptoms.length ? detail.symptoms.join("、") : "依貼上資料判讀，尚需人工補充主要症狀";
+      const timeline = [];
+      if (detail.ccRecord) timeline.push(["上次回診 / CC", compactText(detail.ccRecord)]);
+      if (detail.day2Record) timeline.push(["回診後第 2 天", compactText(detail.day2Record)]);
+      if (detail.phoneRecord) timeline.push(["電話關懷", compactText(detail.phoneRecord)]);
+      if (detail.messageRecord) timeline.push(["訊息關懷", compactText(detail.messageRecord)]);
+      if (detail.appRecord) timeline.push(["APP 紀錄", compactText(detail.appRecord)]);
+      if (detail.otherRecord) timeline.push(["補充資訊", compactText(detail.otherRecord)]);
+      const timelineText = timeline.length
+        ? timeline.map(([date, point]) => `日期：${date}\n重點變化：${point}`).join("\n")
+        : "日期：\n重點變化：未提供足夠時間軸資料";
+      const trendText = buildTrendText(detail, allText);
+      const improvedText = sourceForSection(detail, ["改善", "較穩定", "好轉", "減少", "穩定"]);
+      const persistentText = sourceForSection(detail, ["持續", "未見明顯改善", "長期", "仍", "相同"]);
+      const newChangeText = sourceForSection(detail, ["新增", "新出現", "開始", "加重", "疼痛"]);
+      const recommendations = extractRecommendations(allText, symptoms);
+      const quickConclusion = compactText([persistentText, improvedText, newChangeText].filter(Boolean).join("；"), compactText([symptoms, allText].filter(Boolean).join("；"), "目前資料不足，建議補充關懷紀錄後再產生濃縮摘要。"));
+      return `會員回診前症狀趨勢摘要
+會員：${row["姓名"] || ""}
+主要症狀：
+${symptoms}
+
+一、整體趨勢
+${trendText}
+
+二、改善項目
+項目：
+${improvedText ? inferItemLabel(improvedText, "改善或較穩定項目") : "貼上資料中未明確標示改善項目。"}
+會員描述：
+${compactText(improvedText, "貼上資料中未明確標示改善內容。")}
+趨勢：
+${improvedText ? "依會員描述整理為較前穩定或改善，仍需回診時確認是否持續。" : "未提供足夠資料判定改善趨勢。"}
+
+三、持續困擾項目
+項目：
+${persistentText ? inferItemLabel(persistentText, symptoms) : symptoms}
+會員描述：
+${compactText(persistentText || [detail.phoneRecord, detail.messageRecord, detail.appRecord].filter(Boolean).join(" "), "貼上資料中未提供明確持續困擾描述。")}
+趨勢：
+${persistentText ? "持續存在或未見明顯改善；僅依會員描述與關懷紀錄整理，未加入診斷推測。" : "需補充更多紀錄後判定。"}
+
+四、新出現症狀或變化
+項目：
+${newChangeText ? inferItemLabel(newChangeText, "新出現症狀或變化") : "貼上資料中未明確標示新出現症狀。"}
+首次出現時間：
+${extractFirstDateLabel(allText) || "請依原始紀錄日期補充"}
+會員描述：
+${compactText(newChangeText, "貼上資料中未提供新症狀細節。")}
+
+五、重要時間軸
+${timelineText}
+
+六、本次回診建議優先確認
+${recommendations}
+
+七、醫師快速結論（100字內）
+${compactText(quickConclusion, "目前資料不足，建議補充關懷紀錄後再產生濃縮摘要。")}`;
+    }
+
+    function buildTrendText(detail, text) {
+      if (!clean(text)) return "目前未貼上足夠關懷紀錄，需補充 APP、電話、訊息或回診 CC 後再整理趨勢。";
+      const sentences = text.split(/\n|。|；|;/).map(line => line.trim()).filter(Boolean);
+      const priority = sentences.filter(line => ["持續", "未見明顯改善", "新增", "穩定", "擔憂", "檢查", "追蹤"].some(keyword => line.includes(keyword)));
+      return compactText((priority.length ? priority : sentences).slice(0, 5).join("。") + "。", compactText(text));
+    }
+
+    function extractRecommendations(text, symptoms) {
+      const lines = String(text || "").split(/\n/).map(line => line.trim()).filter(Boolean);
+      const numbered = lines
+        .map(line => line.match(/^\s*(?:\d+|[１２３４５６７８９])\s*[\.．、]\s*(.+)$/)?.[1])
+        .filter(Boolean)
+        .slice(0, 5);
+      const defaults = [
+        `主要症狀是否仍持續、改善或加重：${symptoms}`,
+        "睡眠、心率 / HRV、疼痛或其他功能性變化對日常活動的影響。",
+        "近期檢查、用藥、生活事件或家屬觀察是否與症狀變化同時發生。"
+      ];
+      const items = numbered.length ? numbered : defaults;
+      return items.map((item, index) => `    ${index + 1}. ${item}`).join("\n");
+    }
+
+    function inferItemLabel(text, fallback) {
+      const labels = extractSymptomKeywords(text);
+      return labels.length ? labels.join("、") : fallback;
+    }
+
+    function extractFirstDateLabel(text) {
+      const match = String(text || "").match(/(\d{1,2}\/\d{1,2}\s*[^\n，。；]*)/);
+      return match ? match[1].trim() : "";
+    }
+
+    function sourceForSection(detail, keywords) {
+      const lines = [detail.phoneRecord, detail.messageRecord, detail.appRecord, detail.day2Record, detail.ccRecord, detail.otherRecord]
+        .filter(Boolean)
+        .join("\n")
+        .split(/\n|。|；|;/)
+        .map(line => line.trim())
+        .filter(Boolean);
+      return lines.filter(line => keywords.some(keyword => line.includes(keyword))).join("；");
+    }
+
+    function roleBadges(row) {
+      return rowRoles(row).map(role => `<span class="badge">${esc(role)}</span>`).join(" ");
+    }
+
+    function exportCurrent() {
+      const mine = searchFilter(mineRows());
+      const details = getPatientDetails();
+      const data = mine.map(row => {
+        const item = {};
+        fields.forEach(field => item[field] = row[field] ?? "");
+        item["我的角色"] = rowRoles(row).join("、");
+        item["回診前3天"] = row["回診前3天"] ? "是" : "";
+        item["所有回診日期"] = (row["所有回診"] || []).map(v => v["回診日期"]).join(", ");
+        item["症狀趨勢摘要"] = details[row["__id"]]?.summaryOutput || "";
+        return item;
+      });
+      if (window.XLSX) {
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "我的會員");
+        XLSX.writeFile(wb, `會員關懷_${activeUser || "未登入"}.xlsx`);
+      } else {
+        const csv = toCsv(data);
+        downloadBlob(csv, `會員關懷_${activeUser || "未登入"}.csv`, "text/csv;charset=utf-8");
+      }
+    }
+
+    function toCsv(data) {
+      if (!data.length) return "";
+      const headers = Object.keys(data[0]);
+      const quote = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
+      return [headers.map(quote).join(","), ...data.map(row => headers.map(h => quote(row[h])).join(","))].join("\n");
+    }
+
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], {type});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    async function importWorkbook(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!window.XLSX) {
+        $("status").textContent = "目前無法載入 Excel 解析器，請確認網路可存取 CDN。";
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, {type: "array", cellDates: true});
+      const imported = [];
+      wb.SheetNames.forEach(name => {
+        if (name === "顧問總表") return;
+        const sheet = wb.Sheets[name];
+        const json = XLSX.utils.sheet_to_json(sheet, {defval: "", raw: true});
+        json.forEach(row => {
+          if (!clean(row["姓名"])) return;
+          const visits = Object.keys(row).filter(k => k.includes("回診日期")).map(k => row[k]).filter(Boolean).map((value, idx) => ({"序": idx + 1, "回診日期": normalizeDate(value)})).filter(v => v["回診日期"]);
+          const base = $("baseDate").value;
+          const future = visits.map(v => v["回診日期"]).filter(d => d >= base).sort();
+          const next = future[0] || "";
+          const diff = next ? Math.round((Date.parse(next + "T00:00:00Z") - Date.parse(base + "T00:00:00Z")) / 86400000) : null;
+          imported.push({...row, "__id": `${name}-${row["編號"] || imported.length + 1}-${row["姓名"]}`, "區域": name, "所有回診": visits, "下一次回診日期": next, "距離天數": diff, "回診前3天": diff === 3, "資料異常": []});
+        });
+      });
+      rows = imported;
+      applySavedEdits();
+      DATA.employees = [...new Set(rows.flatMap(row => [row["顧問1"], row["顧問2"], row["客服"]]).filter(Boolean))].sort();
+      $("status").textContent = `已匯入 ${file.name}，共 ${rows.length} 筆。`;
+      $("employeeSelect").innerHTML = DATA.employees.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join("");
+      if (!rows.some(row => rowRoles(row).length)) activeUser = DATA.employees[0] || "";
+      $("currentUser").textContent = activeUser;
+      $("currentRoles").textContent = rolesForUser(activeUser).join("、") || "尚無角色";
+      render();
+    }
+
+    function normalizeDate(value) {
+      if (!value) return "";
+      if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+      if (typeof value === "number") return new Date(Math.round((value - 25569) * 86400 * 1000)).toISOString().slice(0,10);
+      const text = String(value).trim().replace(/[年月.]/g, "/").replace(/日/g, "").replace(/-/g, "/");
+      const m = text.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+      return m ? `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}` : "";
+    }
+
+    init();
+  </script>
+</body>
+</html>
